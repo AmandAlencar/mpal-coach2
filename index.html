@@ -1,0 +1,3316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPAL Coach — Sistema de Alta Performance</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f0ede8;
+    --surface: #faf9f6;
+    --card: #ffffff;
+    --border: #e2ddd6;
+    --accent: #c94f2f;
+    --accent2: #2f6ec9;
+    --accent3: #2ca05a;
+    --warn: #e8931a;
+    --text: #1a1714;
+    --text2: #5c5650;
+    --text3: #9c948c;
+    --red-bg: #fef0ec;
+    --red-border: #fac9bc;
+    --yellow-bg: #fef9ec;
+    --yellow-border: #f5e3a0;
+    --green-bg: #edf7f1;
+    --green-border: #b4e0c6;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* LAYOUT */
+  .shell { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--text);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    overflow-y: auto;
+  }
+
+  .logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .logo-badge {
+    background: var(--accent);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+  .logo h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #fff;
+  }
+  .logo p { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px; }
+
+  .nav { padding: 12px 0; flex: 1; }
+  .nav-section-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    padding: 12px 20px 4px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+  .nav-item.active { background: rgba(201,79,47,0.15); color: var(--accent); border-left-color: var(--accent); }
+  .nav-item .icon { font-size: 15px; width: 18px; text-align: center; }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .exam-countdown {
+    background: rgba(201,79,47,0.12);
+    border: 1px solid rgba(201,79,47,0.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .countdown-days {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .countdown-label { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+
+  .main {
+    margin-left: 240px;
+    flex: 1;
+    min-height: 100vh;
+    padding: 28px;
+  }
+
+  /* PAGE HEADER */
+  .page-header { margin-bottom: 24px; }
+  .page-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .page-header p { color: var(--text2); font-size: 13px; margin-top: 3px; }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 20px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+
+  /* STAT CARDS */
+  .stat-card { padding: 18px 20px; }
+  .stat-label { font-size: 11px; color: var(--text3); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* PROGRESS BAR */
+  .prog-bar { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+  .prog-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+  .prog-bar.lg { height: 10px; }
+  .prog-bar.sm { height: 4px; margin-top: 5px; }
+
+  /* STATUS COLORS */
+  .status-weak { color: var(--accent); }
+  .status-mid { color: var(--warn); }
+  .status-strong { color: var(--accent3); }
+  .bg-weak { background: var(--red-bg); border-color: var(--red-border) !important; }
+  .bg-mid { background: var(--yellow-bg); border-color: var(--yellow-border) !important; }
+  .bg-strong { background: var(--green-bg); border-color: var(--green-border) !important; }
+  .fill-weak { background: var(--accent); }
+  .fill-mid { background: var(--warn); }
+  .fill-strong { background: var(--accent3); }
+  .fill-blue { background: var(--accent2); }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-weak { background: var(--red-bg); color: var(--accent); border: 1px solid var(--red-border); }
+  .badge-mid { background: var(--yellow-bg); color: var(--warn); border: 1px solid var(--yellow-border); }
+  .badge-strong { background: var(--green-bg); color: var(--accent3); border: 1px solid var(--green-border); }
+  .badge-blue { background: #edf3fe; color: var(--accent2); border: 1px solid #c0d3f8; }
+
+  /* TOPIC ROWS */
+  .topic-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .topic-row:last-child { border-bottom: none; }
+  .topic-rank {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text3);
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .topic-info { flex: 1; min-width: 0; }
+  .topic-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topic-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .topic-pct {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    width: 48px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid #f5f3f0; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #faf9f7; }
+  .data-table .disc-name { font-weight: 600; font-size: 13px; }
+
+  /* PLAN DAY */
+  .plan-day { margin-bottom: 12px; }
+  .plan-day-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-radius: 8px 8px 0 0;
+    border: 1px solid var(--border);
+  }
+  .plan-day-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    background: var(--text);
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .plan-day-title { font-weight: 600; font-size: 13px; flex: 1; }
+  .plan-day-time { font-size: 11px; color: var(--text3); }
+  .plan-items { border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; overflow: hidden; }
+  .plan-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .plan-item:last-child { border-bottom: none; }
+  .plan-item:hover { background: #faf9f7; }
+  .plan-item.done { opacity: 0.5; }
+  .plan-item.done .plan-item-name { text-decoration: line-through; }
+  .plan-check {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .plan-item.done .plan-check { background: var(--accent3); border-color: var(--accent3); color: white; font-size: 10px; }
+  .plan-item-content { flex: 1; }
+  .plan-item-name { font-size: 13px; font-weight: 500; }
+  .plan-item-detail { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .plan-item-time { font-size: 11px; color: var(--text3); font-weight: 600; flex-shrink: 0; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg); padding: 4px; border-radius: 10px; display: inline-flex; }
+  .tab {
+    padding: 7px 16px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+  .tab.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* INPUT */
+  .input-group { margin-bottom: 14px; }
+  .input-label { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 5px; letter-spacing: 0.3px; }
+  input[type=text], input[type=number], select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--accent2); }
+
+  .btn {
+    padding: 9px 18px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #b54027; }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .cl-filter-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .btn-blue { background: var(--accent2); color: white; }
+  .btn-blue:hover { background: #2560b0; }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+
+  /* CHECKLIST */
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .checklist-item:hover { background: var(--bg); }
+  .checklist-item.checked { opacity: 0.6; }
+  .checklist-item.checked .cl-text { text-decoration: line-through; color: var(--text3); }
+  .cl-box {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-radius: 3px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    transition: all 0.15s;
+  }
+  .checklist-item.checked .cl-box { background: var(--accent3); border-color: var(--accent3); color: white; }
+  .cl-text { font-size: 12px; flex: 1; }
+  .cl-badge { font-size: 10px; padding: 2px 6px; border-radius: 99px; background: var(--bg); color: var(--text3); }
+
+  /* ALERT */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .alert-icon { font-size: 16px; flex-shrink: 0; }
+  .alert-red { background: var(--red-bg); border: 1px solid var(--red-border); color: #8c2f18; }
+  .alert-yellow { background: var(--yellow-bg); border: 1px solid var(--yellow-border); color: #7a5200; }
+  .alert-green { background: var(--green-bg); border: 1px solid var(--green-border); color: #1a6640; }
+  .alert-blue { background: #edf3fe; border: 1px solid #c0d3f8; color: #1a3e8c; }
+
+  /* SIMULADO */
+  .question-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 14px;
+  }
+  .question-header { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 16px; }
+  .q-num {
+    background: var(--text);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 9px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .q-text { font-size: 14px; line-height: 1.6; flex: 1; }
+  .q-options { display: flex; flex-direction: column; gap: 8px; }
+  .q-opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .q-opt:hover { border-color: var(--accent2); background: #f5f8ff; }
+  .q-opt.selected { border-color: var(--accent2); background: #edf3fe; }
+  .q-opt.correct { border-color: var(--accent3); background: var(--green-bg); }
+  .q-opt.wrong { border-color: var(--accent); background: var(--red-bg); }
+  .q-opt-letter { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--text3); flex-shrink: 0; width: 16px; }
+
+  /* OVERVIEW CHART */
+  .disc-bar-row { margin-bottom: 10px; }
+  .disc-bar-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+  .disc-bar-name { font-weight: 500; color: var(--text); }
+  .disc-bar-val { font-weight: 700; }
+
+  /* SCROLL */
+  .scroll-x { overflow-x: auto; }
+  .scroll-y { overflow-y: auto; }
+  .max-h-400 { max-height: 400px; }
+  .max-h-500 { max-height: 500px; }
+  .max-h-600 { max-height: 600px; }
+
+  /* PAGE VISIBILITY */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* GAPS */
+  .gap-16 { display: flex; flex-direction: column; gap: 16px; }
+  .gap-20 { display: flex; flex-direction: column; gap: 20px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-20 { margin-top: 20px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-16 { margin-bottom: 16px; }
+  .flex { display: flex; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .flex-center { display: flex; align-items: center; }
+  .flex-gap-8 { display: flex; gap: 8px; }
+  .flex-gap-12 { display: flex; gap: 12px; }
+  .flex-1 { flex: 1; }
+  .text-center { text-align: center; }
+  .small { font-size: 11px; color: var(--text3); }
+  .fw-600 { font-weight: 600; }
+  .fw-700 { font-weight: 700; }
+  .font-syne { font-family: 'Syne', sans-serif; }
+
+  /* PRIORITY FIRE INDICATOR */
+  .fire { display: inline-block; animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+  /* TOOLTIP */
+  [title] { cursor: help; }
+
+  /* CELEBRATION OVERLAY */
+  #celebration-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(10,10,10,0.55);
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+    animation: fadeInOverlay 0.3s ease;
+  }
+  #celebration-overlay.show { display: flex; }
+  @keyframes fadeInOverlay { from { opacity:0 } to { opacity:1 } }
+
+  .celebration-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px 48px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    position: relative;
+    animation: popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+  }
+  @keyframes popIn {
+    0% { transform: scale(0.7); opacity: 0; }
+    80% { transform: scale(1.04); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  .celebration-emoji {
+    font-size: 64px;
+    line-height: 1;
+    margin-bottom: 16px;
+    display: block;
+    animation: bounce 0.6s ease 0.3s both;
+  }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    40% { transform: translateY(-16px); }
+    70% { transform: translateY(-8px); }
+  }
+  .celebration-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .celebration-sub {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+  .celebration-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--green-bg);
+    border: 1px solid var(--green-border);
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent3);
+    margin-bottom: 24px;
+  }
+  .confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    animation: confetti-fall 1.2s ease-out forwards;
+    opacity: 0;
+  }
+  @keyframes confetti-fall {
+    0%   { transform: translate(0,0) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)); opacity: 0; }
+  }
+  /* RESPONSIVE */
+  @media (max-width: 1200px) {
+    .grid-4 { grid-template-columns: repeat(2,1fr); }
+  }
+  @media (max-width: 900px) {
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .sidebar { width: 60px; }
+    .sidebar .logo p, .sidebar .nav-section-label, .sidebar .nav-item span, .sidebar-footer .exam-countdown { display: none; }
+    .main { margin-left: 60px; }
+    .nav-item { padding: 12px; justify-content: center; }
+    .nav-item .icon { width: auto; }
+  }
+</style>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c94f2f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MPAL Coach">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+
+<!-- Tela de Login -->
+<div id="login-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#f0ede8;justify-content:center;align-items:center;font-family:'DM Sans',sans-serif;">
+  <div style="background:#fff;border-radius:20px;padding:44px 48px;width:100%;max-width:380px;box-shadow:0 12px 48px rgba(0,0,0,0.12);border:1px solid #e2ddd6;text-align:center;">
+    <div style="background:#c94f2f;color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:11px;letter-spacing:2px;padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:10px;">MPAL 2026</div>
+    <h1 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;margin-bottom:4px;color:#1a1714">Concurso Coach</h1>
+    <p style="font-size:12px;color:#9c948c;margin-bottom:28px">Faça login para acessar seu painel</p>
+    <div style="text-align:left;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;color:#5c5650;margin-bottom:5px">Email</div>
+      <input id="login-email" type="text" placeholder="seu@email.com" style="width:100%;padding:10px 13px;border:1px solid #e2ddd6;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#faf9f6;color:#1a1714" onkeydown="loginKeydown(event)">
+    </div>
+    <div style="text-align:left;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:600;color:#5c5650;margin-bottom:5px">Senha</div>
+      <input id="login-senha" type="password" placeholder="••••••••" style="width:100%;padding:10px 13px;border:1px solid #e2ddd6;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#faf9f6;color:#1a1714" onkeydown="loginKeydown(event)">
+    </div>
+    <div id="login-erro" style="color:#c94f2f;font-size:12px;margin-bottom:12px;min-height:16px"></div>
+    <button id="login-btn" onclick="doLogin()" style="width:100%;padding:11px;background:#c94f2f;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;" onmouseover="this.style.background='#b54027'" onmouseout="this.style.background='#c94f2f'">Entrar</button>
+  </div>
+</div>
+
+<!-- Indicador de Sincronização -->
+<div id="sync-status" style="position:fixed;bottom:16px;right:16px;z-index:9998;padding:7px 14px;border-radius:99px;font-size:11px;font-weight:600;background:#edf7f1;color:#1a6640;border:1px solid #b4e0c6;opacity:0;transition:opacity 0.4s ease;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>
+
+<div class="shell" style="display:none">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-badge">MPAL 2026</div>
+    <h1>Concurso Coach</h1>
+    <p>Meta: 95% de acerto</p>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section-label">Principal</div>
+    <a class="nav-item active" onclick="goPage('dashboard')">
+      <span class="icon">📊</span><span>Dashboard</span>
+    </a>
+    <a class="nav-item" onclick="goPage('diagnostico')">
+      <span class="icon">🔬</span><span>Diagnóstico</span>
+    </a>
+    <a class="nav-item" onclick="goPage('plano')">
+      <span class="icon">📅</span><span>Plano Diário</span>
+    </a>
+
+    <div class="nav-section-label">Estudo</div>
+    <a class="nav-item" onclick="goPage('disciplinas')">
+      <span class="icon">📚</span><span>Disciplinas</span>
+    </a>
+    <a class="nav-item" onclick="goPage('topicos')">
+      <span class="icon">🎯</span><span>Tópicos Críticos</span>
+    </a>
+    <a class="nav-item" onclick="goPage('checklist')">
+      <span class="icon">✅</span><span>Checklist Edital</span>
+    </a>
+    <a class="nav-item" onclick="goPage('revisao')">
+      <span class="icon">🔁</span><span>Revisão</span>
+    </a>
+
+    <div class="nav-section-label">Avaliação</div>
+    <a class="nav-item" onclick="goPage('simulado')">
+      <span class="icon">📝</span><span>Simulado</span>
+    </a>
+    <a class="nav-item" onclick="goPage('progresso')">
+      <span class="icon">📈</span><span>Progresso</span>
+    </a>
+    <a class="nav-item" onclick="goPage('atualizar')">
+      <span class="icon">✏️</span><span>Atualizar Dados</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="exam-countdown">
+      <div class="countdown-days" id="countdown-days">—</div>
+      <div class="countdown-label">dias para a prova</div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+<!-- ================== DASHBOARD ================== -->
+<div id="page-dashboard" class="page active">
+  <div class="page-header">
+    <h2>Dashboard — Visão Geral</h2>
+    <p>Seu painel de controle estratégico para o MPAL 2026</p>
+  </div>
+
+  <!-- Alert crítico -->
+  <div class="alert alert-red" id="critical-alert">
+    <span class="alert-icon">🔥</span>
+    <div>
+      <strong>Atenção prioritária:</strong> Você tem <span id="weak-count">0</span> tópicos abaixo de 70% com alta incidência na FCC. Concentre seus estudos neles antes de qualquer revisão.
+    </div>
+  </div>
+
+  <!-- Stats top -->
+  <div class="grid-4 mb-16">
+    <div class="card stat-card">
+      <div class="stat-label">Média Geral</div>
+      <div class="stat-value" id="stat-media" style="color:var(--accent)">—%</div>
+      <div class="stat-sub">Meta: 95%</div>
+      <div class="prog-bar lg mt-16">
+        <div class="prog-bar-fill fill-weak" id="prog-media" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Tópicos Fracos</div>
+      <div class="stat-value status-weak" id="stat-fraco">—</div>
+      <div class="stat-sub">abaixo de 70%</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Tópicos Médios</div>
+      <div class="stat-value status-mid" id="stat-medio">—</div>
+      <div class="stat-sub">entre 70% e 85%</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Tópicos Fortes</div>
+      <div class="stat-value status-strong" id="stat-forte">—</div>
+      <div class="stat-sub">acima de 85%</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Top 10 piores -->
+    <div class="card">
+      <div class="section-title"><span class="fire">🔥</span> Top 10 — Prioridade Máxima</div>
+      <div id="top10-list"></div>
+    </div>
+
+    <!-- Por disciplina -->
+    <div class="card">
+      <div class="section-title">📊 Desempenho por Disciplina (MPAL)</div>
+      <div id="disc-overview"></div>
+    </div>
+  </div>
+
+  <!-- Cargos -->
+  <div class="card mt-16">
+    <div class="section-title">🎯 Estratégia Dual — Técnico + Analista em Gestão</div>
+    <div class="grid-2">
+      <div>
+        <div class="flex-between mb-8">
+          <div>
+            <div class="fw-600" style="font-size:13px">Técnico do Ministério Público</div>
+            <div class="small">Prova: Manhã | 17/05/2026</div>
+          </div>
+          <span class="badge badge-blue">Cód. 14</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7">
+          <strong>Estrutura:</strong> 30 Conhecimentos Gerais + 30 Específicos<br>
+          <strong>Gerais (Peso 1):</strong> Língua Portuguesa + Noções de Legislação<br>
+          <strong>Específicos (Peso 2):</strong> Dir. Constitucional + Dir. Administrativo + Noções Adm. Pública<br>
+          <strong>Nota mínima:</strong> 7,0 (média pond. ponderada)
+        </div>
+      </div>
+      <div>
+        <div class="flex-between mb-8">
+          <div>
+            <div class="fw-600" style="font-size:13px">Analista — Área de Gestão Pública</div>
+            <div class="small">Prova: Tarde | 17/05/2026</div>
+          </div>
+          <span class="badge badge-blue">Cód. 02</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7">
+          <strong>Estrutura:</strong> 30 Conhecimentos Gerais + 30 Específicos<br>
+          <strong>Gerais (Peso 1):</strong> Língua Portuguesa + Noções de Legislação<br>
+          <strong>Específicos (Peso 2):</strong> Adm. Geral + Gestão de Pessoas + AFO<br>
+          <strong>Nota mínima:</strong> 7,0 (média ponderada)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================== DIAGNÓSTICO ================== -->
+<div id="page-diagnostico" class="page">
+  <div class="page-header">
+    <h2>Diagnóstico Inteligente</h2>
+    <p>Mapeamento completo do seu desempenho por categoria</p>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="setDiagTab('fraco', this)">🔴 Fraco (&lt;70%)</div>
+    <div class="tab" onclick="setDiagTab('medio', this)">🟡 Médio (70–85%)</div>
+    <div class="tab" onclick="setDiagTab('forte', this)">🟢 Forte (&gt;85%)</div>
+    <div class="tab" onclick="setDiagTab('todos', this)">📋 Todos</div>
+  </div>
+
+  <div class="card">
+    <div id="diag-list" class="scroll-y max-h-600"></div>
+  </div>
+</div>
+
+<!-- ================== PLANO DIÁRIO ================== -->
+<div id="page-plano" class="page">
+  <div class="page-header">
+    <h2>Plano de Estudo — Cronograma até a Prova</h2>
+    <p>4 horas diárias · todos os tópicos cobertos até 15 dias antes da prova (02/05/2026)</p>
+  </div>
+
+  <div class="alert alert-blue" id="plano-status-alert">
+    <span class="alert-icon">📅</span>
+    <div id="plano-status-text">Calculando cronograma...</div>
+  </div>
+
+  <!-- Mini-stats do cronograma -->
+  <div class="grid-4 mb-16" id="plano-stats-grid">
+    <div class="card stat-card">
+      <div class="stat-label">Dias Úteis Restantes</div>
+      <div class="stat-value" id="ps-dias" style="color:var(--accent2)">—</div>
+      <div class="stat-sub">até 02/05/2026</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Tópicos a Cobrir</div>
+      <div class="stat-value status-weak" id="ps-topicos">—</div>
+      <div class="stat-sub">fracos + médios prioritários</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Tópicos/Dia</div>
+      <div class="stat-value" id="ps-tpd">—</div>
+      <div class="stat-sub">meta do sistema</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Fase Atual</div>
+      <div class="stat-value" id="ps-fase" style="font-size:16px;color:var(--accent)">—</div>
+    </div>
+  </div>
+
+  <!-- Abas de visualização -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div class="tabs">
+      <div class="tab active" onclick="setPlanoTab('hoje', this)">📌 Hoje</div>
+      <div class="tab" onclick="setPlanoTab('semana', this)">📅 Esta Semana</div>
+      <div class="tab" onclick="setPlanoTab('completo', this)">🗓️ Cronograma Completo</div>
+    </div>
+    <div class="small">Clique nos itens para marcar como concluído</div>
+  </div>
+
+  <div id="plano-container"></div>
+</div>
+
+<!-- ================== DISCIPLINAS ================== -->
+<div id="page-disciplinas" class="page">
+  <div class="page-header">
+    <h2>Disciplinas do Edital MPAL</h2>
+    <p>Análise detalhada por matéria — foco na banca FCC</p>
+  </div>
+
+  <div class="scroll-x">
+    <table class="data-table card" style="min-width:700px">
+      <thead>
+        <tr>
+          <th>Disciplina</th>
+          <th>Cargo</th>
+          <th>Peso FCC</th>
+          <th>Seu Acerto</th>
+          <th>Questões</th>
+          <th>Status</th>
+          <th>Prioridade</th>
+        </tr>
+      </thead>
+      <tbody id="disc-table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================== TÓPICOS CRÍTICOS ================== -->
+<div id="page-topicos" class="page">
+  <div class="page-header">
+    <h2>Tópicos Críticos — Foco Total</h2>
+    <p>Ordenados por urgência: pior desempenho × maior incidência FCC</p>
+  </div>
+
+  <div class="flex-gap-8 mb-16">
+    <button class="btn btn-secondary btn-sm" onclick="filterTopicos('todos')">Todos</button>
+    <button class="btn btn-secondary btn-sm" onclick="filterTopicos('portugues')">Português</button>
+    <button class="btn btn-secondary btn-sm" onclick="filterTopicos('adm')">Adm. Geral/Pública</button>
+    <button class="btn btn-secondary btn-sm" onclick="filterTopicos('afo')">AFO</button>
+    <button class="btn btn-secondary btn-sm" onclick="filterTopicos('dconst')">Dir. Constitucional</button>
+    <button class="btn btn-secondary btn-sm" onclick="filterTopicos('dadm')">Dir. Administrativo</button>
+    <button class="btn btn-secondary btn-sm" onclick="filterTopicos('gp')">Gestão de Pessoas</button>
+    <button class="btn btn-secondary btn-sm" onclick="filterTopicos('pmbok')">PMBOK</button>
+    <button class="btn btn-secondary btn-sm" onclick="filterTopicos('leg')">Legislação</button>
+  </div>
+
+  <div class="card">
+    <div id="topicos-list"></div>
+  </div>
+</div>
+
+<!-- ================== CHECKLIST ================== -->
+<div id="page-checklist" class="page">
+  <div class="page-header">
+    <h2>Checklist Completo do Edital</h2>
+    <p>Cobertura total do conteúdo programático — marque o que domina</p>
+  </div>
+
+  <div class="grid-4 mb-16">
+    <div class="card stat-card text-center">
+      <div class="stat-label">Cobertura</div>
+      <div class="stat-value" id="cl-pct" style="color:var(--accent2)">0%</div>
+    </div>
+    <div class="card stat-card text-center">
+      <div class="stat-label">Concluído</div>
+      <div class="stat-value status-strong" id="cl-done">0</div>
+    </div>
+    <div class="card stat-card text-center">
+      <div class="stat-label">Pendente</div>
+      <div class="stat-value status-weak" id="cl-pend">0</div>
+    </div>
+    <div class="card stat-card text-center">
+      <div class="stat-label">Total</div>
+      <div class="stat-value" id="cl-total">0</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:16px">
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Filtrar por cargo</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm cl-filter-btn active" data-f="todos" onclick="renderChecklist('todos')">📋 Todos os tópicos</button>
+      <button class="btn btn-secondary btn-sm cl-filter-btn" data-f="tecnico" onclick="renderChecklist('tecnico')">🟠 Técnico (Cód. 14) — Manhã</button>
+      <button class="btn btn-secondary btn-sm cl-filter-btn" data-f="analista" onclick="renderChecklist('analista')">🟢 Analista Gestão Pública (Cód. 02) — Tarde</button>
+      <button class="btn btn-secondary btn-sm cl-filter-btn" data-f="ambos" onclick="renderChecklist('ambos')">🔵 Somente Gerais (Ambos)</button>
+    </div>
+  </div>
+
+  <div id="checklist-container" class="gap-16"></div>
+</div>
+
+<!-- ================== REVISÃO ================== -->
+<div id="page-revisao" class="page">
+  <div class="page-header">
+    <h2>Sistema de Revisão</h2>
+    <p>Revisão diária de erros + revisão semanal estratégica</p>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">📌 Revisão Diária — Erros de Ontem</div>
+      <div class="alert alert-yellow">
+        <span class="alert-icon">⚡</span>
+        <div>Registre os tópicos que errou na sessão de hoje. Eles entrarão automaticamente no plano de amanhã.</div>
+      </div>
+      <div id="revisao-diaria-list" class="mb-16"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="erro-input" placeholder="Nome do tópico que errei..." style="flex:1">
+        <button class="btn btn-primary" onclick="addErro()">Adicionar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">🔁 Revisão Semanal — Pontos Fracos</div>
+      <div class="alert alert-red">
+        <span class="alert-icon">🎯</span>
+        <div>Estes são seus tópicos mais críticos acumulados. Revise ao menos 3 por semana.</div>
+      </div>
+      <div id="revisao-semanal-list" class="scroll-y max-h-400"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================== SIMULADO ================== -->
+<div id="page-simulado" class="page">
+  <div class="page-header">
+    <h2>Simulado Estratégico FCC</h2>
+    <p>Questões estilo FCC priorizando seus tópicos mais fracos</p>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="setSimTab('focado', this)">🎯 Tópicos Fracos</div>
+    <div class="tab" onclick="setSimTab('misto', this)">🔀 Misto Estilo FCC</div>
+    <div class="tab" onclick="setSimTab('resultado', this)">📊 Resultados</div>
+  </div>
+
+  <div id="sim-config" class="card">
+    <div class="section-title">Configurar Simulado</div>
+    <div class="grid-2">
+      <div>
+        <div class="input-group">
+          <div class="input-label">Número de Questões</div>
+          <select id="sim-qtd">
+            <option value="10">10 questões (rápido)</option>
+            <option value="20" selected>20 questões (médio)</option>
+            <option value="30">30 questões (completo)</option>
+            <option value="60">60 questões (prova completa)</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <div class="input-label">Disciplina Foco</div>
+          <select id="sim-disc">
+            <option value="todos">Todas as disciplinas</option>
+            <option value="portugues">Língua Portuguesa</option>
+            <option value="dadm">Direito Administrativo</option>
+            <option value="dconst">Direito Constitucional</option>
+            <option value="afo">AFO</option>
+            <option value="adm">Administração Geral</option>
+            <option value="gp">Gestão de Pessoas</option>
+            <option value="leg">Legislação MPAL</option>
+            <option value="pmbok">PMBOK</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:10px">
+        <button class="btn btn-primary" onclick="iniciarSimulado()">▶ Iniciar Simulado</button>
+        <button class="btn btn-secondary" onclick="verResultados()">📊 Ver Histórico</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sim-area" style="display:none"></div>
+  <div id="sim-resultado" style="display:none"></div>
+</div>
+
+<!-- ================== PROGRESSO ================== -->
+<div id="page-progresso" class="page">
+  <div class="page-header">
+    <h2>Evolução e Progresso</h2>
+    <p>Acompanhe sua trajetória rumo aos 95%</p>
+  </div>
+
+  <div class="grid-4 mb-16">
+    <div class="card stat-card">
+      <div class="stat-label">Sessões Registradas</div>
+      <div class="stat-value" id="prog-sessoes" style="color:var(--accent2)">0</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Questões Respondidas</div>
+      <div class="stat-value" id="prog-questoes">0</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Taxa de Acerto Hoje</div>
+      <div class="stat-value" id="prog-hoje">—%</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Gap para Meta</div>
+      <div class="stat-value status-weak" id="prog-gap">—%</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">📈 Histórico de Simulados</div>
+    <div id="historico-simulados"></div>
+  </div>
+</div>
+
+<!-- ================== ATUALIZAR DADOS ================== -->
+<div id="page-atualizar" class="page">
+  <div class="page-header">
+    <h2>Registrar Questões</h2>
+    <p>Informe seus acertos — os percentuais e gráficos atualizam automaticamente em todo o sistema</p>
+  </div>
+
+  <div class="alert alert-blue">
+    <span class="alert-icon">⚡</span>
+    <div><strong>Como funciona:</strong> Selecione a disciplina, escolha o tópico exato da lista, informe quantas questões resolveu e quantas acertou. O sistema recalcula seu % naquele tópico usando média ponderada com os dados anteriores — sem apagar seu histórico.</div>
+  </div>
+
+  <div class="grid-2">
+    <!-- FORM -->
+    <div class="card">
+      <div class="section-title">➕ Nova Sessão de Questões</div>
+
+      <div class="input-group">
+        <div class="input-label">1. Disciplina</div>
+        <select id="upd-disc" onchange="atualizarTopicosDisp()">
+          <option value="">— Selecione —</option>
+          <option value="portugues">Língua Portuguesa</option>
+          <option value="leg">Legislação MPAL</option>
+          <option value="dconst">Direito Constitucional</option>
+          <option value="dadm">Direito Administrativo</option>
+          <option value="adm">Administração Geral e Pública</option>
+          <option value="gp">Gestão de Pessoas</option>
+          <option value="afo">AFO</option>
+          <option value="pmbok">Gestão de Projetos (PMBOK)</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <div class="input-label">2. Tópico (selecione ou digite)</div>
+        <select id="upd-topic-sel" style="margin-bottom:6px" onchange="syncTopicoInput()">
+          <option value="">— Selecione a disciplina primeiro —</option>
+        </select>
+        <input type="text" id="upd-topic" placeholder="Ou digite o nome do tópico livremente..." style="font-size:12px">
+      </div>
+
+      <div class="grid-2" style="gap:10px">
+        <div class="input-group" style="margin-bottom:0">
+          <div class="input-label">3. Questões Resolvidas</div>
+          <input type="number" id="upd-qtd" placeholder="Ex: 20" min="1" oninput="calcAcertos()">
+        </div>
+        <div class="input-group" style="margin-bottom:0">
+          <div class="input-label">4. Questões Acertadas</div>
+          <input type="number" id="upd-acertos" placeholder="Ex: 16" min="0" oninput="calcPct()">
+        </div>
+      </div>
+
+      <!-- Preview do resultado -->
+      <div id="upd-preview" style="display:none;margin:14px 0;padding:12px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--text3);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Prévia do resultado</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div>
+            <div style="font-size:10px;color:var(--text3)">Esta sessão</div>
+            <div id="prev-sessao" style="font-family:'Syne';font-size:22px;font-weight:800">—%</div>
+          </div>
+          <div style="font-size:20px;color:var(--text3)">→</div>
+          <div>
+            <div style="font-size:10px;color:var(--text3)">Novo acumulado</div>
+            <div id="prev-novo" style="font-family:'Syne';font-size:22px;font-weight:800;color:var(--accent2)">—%</div>
+          </div>
+          <div style="flex:1"></div>
+          <div id="prev-delta" style="font-size:13px;font-weight:700"></div>
+        </div>
+        <div class="prog-bar lg mt-16">
+          <div id="prev-bar" class="prog-bar-fill fill-blue" style="width:0%"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="registrarSessao()">
+        ✅ Registrar e Atualizar Sistema
+      </button>
+
+      <div id="upd-feedback" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <!-- HISTÓRICO + RANKING DE MELHORA -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="section-title">📈 Maiores Evoluções</div>
+        <div id="maiores-evolucoes" class="scroll-y" style="max-height:180px"></div>
+      </div>
+      <div class="card">
+        <div class="section-title">📋 Últimas Sessões</div>
+        <div id="sessoes-list" class="scroll-y max-h-400"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela completa de tópicos com % atualizado -->
+  <div class="card mt-16">
+    <div class="flex-between mb-16">
+      <div class="section-title" style="margin-bottom:0">🔢 Todos os Tópicos — Percentuais Atualizados</div>
+      <select id="filter-disc-tabela" onchange="renderTabelaTopicos()" style="width:220px">
+        <option value="todos">Todas as disciplinas</option>
+        <option value="portugues">Língua Portuguesa</option>
+        <option value="leg">Legislação MPAL</option>
+        <option value="dconst">Direito Constitucional</option>
+        <option value="dadm">Direito Administrativo</option>
+        <option value="adm">Administração Geral</option>
+        <option value="gp">Gestão de Pessoas</option>
+        <option value="afo">AFO</option>
+        <option value="pmbok">PMBOK</option>
+      </select>
+    </div>
+    <div id="tabela-topicos-container" class="scroll-y" style="max-height:500px"></div>
+  </div>
+</div>
+
+</main><!-- /main -->
+
+<!-- CELEBRATION OVERLAY -->
+<div id="celebration-overlay" onclick="closeCelebration()">
+  <div class="celebration-card" onclick="event.stopPropagation()" id="celebration-card">
+    <span class="celebration-emoji" id="cel-emoji">🎉</span>
+    <div class="celebration-title" id="cel-title">Parabéns!</div>
+    <div class="celebration-sub" id="cel-sub">Você está evoluindo!</div>
+    <div class="celebration-stat" id="cel-stat">
+      <span id="cel-stat-text">+5%</span>
+    </div>
+    <button class="btn btn-primary" onclick="closeCelebration()" style="width:100%">
+      💪 Continuar Estudando!
+    </button>
+  </div>
+</div>
+</div><!-- /shell -->
+
+<script>
+// Registra Service Worker (PWA)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+
+// ============================================================
+// FIREBASE — Auth + Realtime Database
+// ============================================================
+var db;   // Realtime Database
+var auth; // Firebase Auth
+
+function _bootstrapApp() {
+  firebase.initializeApp({
+    apiKey: "AIzaSyCGTcgmZiRv3HLGwQttSQGd63znsVJ_RK8",
+    authDomain: "mpal-coach.firebaseapp.com",
+    databaseURL: "https://mpal-coach-default-rtdb.firebaseio.com",
+    projectId: "mpal-coach",
+    storageBucket: "mpal-coach.firebasestorage.app",
+    messagingSenderId: "693674924860",
+    appId: "1:693674924860:web:ece9d898de259234661c39"
+  });
+  db   = firebase.database();
+  auth = firebase.auth();
+
+  // Observa estado de autenticação
+  auth.onAuthStateChanged(function(user) {
+    if (user) {
+      // Logado — esconde tela de login e inicia app
+      document.getElementById('login-overlay').style.display = 'none';
+      document.querySelector('.shell').style.display = 'flex';
+      init();
+    } else {
+      // Não logado — mostra tela de login
+      document.getElementById('login-overlay').style.display = 'flex';
+      document.querySelector('.shell').style.display = 'none';
+    }
+  });
+}
+
+function doLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var senha = document.getElementById('login-senha').value;
+  var btn   = document.getElementById('login-btn');
+  var err   = document.getElementById('login-erro');
+  err.textContent = '';
+  btn.textContent = 'Entrando…';
+  btn.disabled = true;
+  auth.signInWithEmailAndPassword(email, senha)
+    .catch(function(e) {
+      err.textContent = 'Email ou senha incorretos.';
+      btn.textContent = 'Entrar';
+      btn.disabled = false;
+    });
+}
+
+// Permite pressionar Enter no campo de senha
+function loginKeydown(e) { if (e.key === 'Enter') doLogin(); }
+
+(function loadFirebaseSDKs() {
+  var s1 = document.createElement('script');
+  s1.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
+  s1.onload = function() {
+    var s2 = document.createElement('script');
+    s2.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js';
+    s2.onload = function() {
+      var s3 = document.createElement('script');
+      s3.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js';
+      s3.onload = _bootstrapApp;
+      document.head.appendChild(s3);
+    };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s1);
+})();
+
+// ============================================================
+// DADOS: Performance real extraída das planilhas
+// ============================================================
+
+const EXAM_DATE = new Date('2026-05-17');
+
+const DISCIPLINAS_MPAL = [
+  // [key, nome, cargo, pesoFCC(1-3), acerto%, questões, categoria]
+  { key: 'portugues', nome: 'Língua Portuguesa', cargo: 'Ambos', peso: 1, pct: 72, questoes: 1594, cat: 'geral',
+    topicos: [
+      { nome: 'Interpretação de Textos', pct: 82, q: 562, inc: 'alta' },
+      { nome: 'Reescrita e Substituição', pct: 70, q: 166, inc: 'alta' },
+      { nome: 'Coerência e Coesão / Conectivos', pct: 73, q: 87, inc: 'alta' },
+      { nome: 'Concordância (Verbal e Nominal)', pct: 61, q: 111, inc: 'alta' },
+      { nome: 'Vozes (Passiva e Ativa)', pct: 69, q: 72, inc: 'alta' },
+      { nome: 'Pontuação', pct: 73, q: 82, inc: 'alta' },
+      { nome: 'Figuras de Linguagem', pct: 79, q: 61, inc: 'média' },
+      { nome: 'Tipos de Discurso', pct: 75, q: 60, inc: 'média' },
+      { nome: 'Regência Nominal e Verbal', pct: 58, q: 57, inc: 'alta' },
+      { nome: 'Sintaxe (geral)', pct: 58, q: 61, inc: 'alta' },
+      { nome: 'Crase', pct: 55, q: 22, inc: 'alta' },
+      { nome: 'Colocação Pronominal', pct: 59, q: 17, inc: 'média' },
+      { nome: 'Partícula "Se"', pct: 39, q: 21, inc: 'alta' },
+      { nome: 'Ortografia', pct: 72, q: 75, inc: 'média' },
+      { nome: 'Pronomes Relativos', pct: 60, q: 10, inc: 'média' },
+      { nome: 'Verbos — Modos e Tempos', pct: 71, q: 67, inc: 'média' },
+      { nome: 'Termos Essenciais da Oração', pct: 50, q: 12, inc: 'média' },
+      { nome: 'Semântica / Significação', pct: 73, q: 77, inc: 'média' },
+      { nome: 'Conjunções', pct: 77, q: 66, inc: 'média' },
+    ]
+  },
+  { key: 'leg', nome: 'Noções de Legislação (MPAL)', cargo: 'Ambos', peso: 1, pct: 84, questoes: 1002, cat: 'geral',
+    topicos: [
+      { nome: 'Lei 5.247/1991 — Estatuto AL (geral)', pct: 84, q: 1002, inc: 'alta' },
+      { nome: 'Regime Funcional (arts. 5-44)', pct: 84, q: 342, inc: 'alta' },
+      { nome: 'Ação Disciplinar (arts. 145-193)', pct: 84, q: 143, inc: 'alta' },
+      { nome: 'Regime Disciplinar (arts. 118-144)', pct: 85, q: 179, inc: 'alta' },
+      { nome: 'Direitos e Vantagens (arts. 45-117)', pct: 86, q: 270, inc: 'alta' },
+      { nome: 'Disposições Preliminares (arts. 1-4)', pct: 69, q: 22, inc: 'média' },
+      { nome: 'Lei Orgânica MP-AL (LC 15/1996)', pct: 87, q: 139, inc: 'alta' },
+      { nome: 'Org. Adm. MPAL (Lei 6.306/2002)', pct: 80, q: 100, inc: 'média' },
+    ]
+  },
+  { key: 'dconst', nome: 'Dir. Constitucional (Específico)', cargo: 'Técnico', peso: 2, pct: 73, questoes: 1430, cat: 'especifico',
+    topicos: [
+      { nome: 'Direitos Individuais e Coletivos (art. 5º)', pct: 88, q: 163, inc: 'altíssima' },
+      { nome: 'Competências União/Estados/DF/Municípios', pct: 73, q: 81, inc: 'alta' },
+      { nome: 'Direitos Sociais (arts. 6-7)', pct: 84, q: 71, inc: 'alta' },
+      { nome: 'Direitos Políticos', pct: 84, q: 61, inc: 'alta' },
+      { nome: 'Princípios Fundamentais (arts. 1-4)', pct: 81, q: 92, inc: 'alta' },
+      { nome: 'Poder Judiciário — STF', pct: 59, q: 55, inc: 'alta' },
+      { nome: 'Poder Judiciário — TRFs e Juízes Federais', pct: 47, q: 26, inc: 'alta' },
+      { nome: 'Poder Judiciário — CNJ', pct: 39, q: 13, inc: 'alta' },
+      { nome: 'Controle de Constitucionalidade — ADI', pct: 56, q: 18, inc: 'alta' },
+      { nome: 'Controle de Constitucionalidade (geral)', pct: 62, q: 31, inc: 'alta' },
+      { nome: 'Poder Legislativo — Processo Legislativo', pct: 68, q: 77, inc: 'alta' },
+      { nome: 'Medidas Provisórias', pct: 58, q: 21, inc: 'alta' },
+      { nome: 'Administração Pública (arts. 37-38)', pct: 78, q: 62, inc: 'alta' },
+      { nome: 'Servidores Públicos (arts. 39-41)', pct: 66, q: 32, inc: 'alta' },
+      { nome: 'Seguridade Social (arts. 194-195)', pct: 63, q: 32, inc: 'média' },
+      { nome: 'Estado de Defesa e Sítio', pct: 47, q: 15, inc: 'média' },
+      { nome: 'Jurisprudência — Constitucional', pct: 60, q: 45, inc: 'alta' },
+      { nome: 'Ordem Social — Saúde (arts. 196-200)', pct: 0, q: 6, inc: 'média' },
+      { nome: 'Funções Essenciais — Ministério Público', pct: 86, q: 139, inc: 'alta' },
+    ]
+  },
+  { key: 'dadm', nome: 'Dir. Administrativo (Específico)', cargo: 'Técnico', peso: 2, pct: 74, questoes: 1416, cat: 'especifico',
+    topicos: [
+      { nome: 'Administração Indireta', pct: 72, q: 97, inc: 'altíssima' },
+      { nome: 'Atos Administrativos — Elementos/Requisitos', pct: 58, q: 50, inc: 'altíssima' },
+      { nome: 'Desfazimento do Ato (Anulação/Revogação)', pct: 68, q: 76, inc: 'alta' },
+      { nome: 'Licitações — Lei 14.133/2021', pct: 73, q: 132, inc: 'altíssima' },
+      { nome: 'Contratos Administrativos — Lei 14.133', pct: 71, q: 92, inc: 'alta' },
+      { nome: 'PPP — Lei 11.079/2004', pct: 48, q: 17, inc: 'alta' },
+      { nome: 'Estatuto das Parcerias — Lei 13.019/2014', pct: 50, q: 16, inc: 'alta' },
+      { nome: 'Bens Públicos', pct: 39, q: 13, inc: 'alta' },
+      { nome: 'Formas de Utilização de Bens Públicos', pct: 29, q: 7, inc: 'média' },
+      { nome: 'Poder de Polícia', pct: 78, q: 61, inc: 'alta' },
+      { nome: 'Administração Direta (Órgãos Públicos)', pct: 42, q: 24, inc: 'alta' },
+      { nome: 'Processo Administrativo (Lei 9.784/1999)', pct: 67, q: 27, inc: 'alta' },
+      { nome: 'Convalidação dos Atos Administrativos', pct: 58, q: 14, inc: 'média' },
+      { nome: 'Improbidade Administrativa (Lei 8.429/1992)', pct: 70, q: 35, inc: 'alta' },
+      { nome: 'Controle das Contratações', pct: 40, q: 5, inc: 'média' },
+      { nome: 'LGPD — Disposições Preliminares', pct: 75, q: 30, inc: 'alta' },
+      { nome: 'Lei de Acesso à Informação (12.527)', pct: 72, q: 20, inc: 'média' },
+      { nome: 'Desapropriação / Intervenção Estado', pct: 40, q: 10, inc: 'média' },
+      { nome: 'Jurisprudência Administrativa', pct: 61, q: 23, inc: 'alta' },
+    ]
+  },
+  { key: 'adm', nome: 'Administração Geral e Pública', cargo: 'Analista', peso: 2, pct: 76, questoes: 2665, cat: 'especifico',
+    topicos: [
+      { nome: 'Balanced Scorecard (BSC)', pct: 85, q: 102, inc: 'altíssima' },
+      { nome: 'Processo Decisório', pct: 81, q: 116, inc: 'alta' },
+      { nome: 'Cultura Organizacional', pct: 81, q: 144, inc: 'alta' },
+      { nome: 'Diagnóstico Organizacional — SWOT', pct: 78, q: 50, inc: 'alta' },
+      { nome: 'Planejamento Estratégico', pct: 76, q: 391, inc: 'altíssima' },
+      { nome: 'Qualidade nos Serviços Públicos (Gespública)', pct: 71, q: 54, inc: 'alta' },
+      { nome: 'Ciclo PDCA', pct: 74, q: 46, inc: 'alta' },
+      { nome: 'Gestão por Processos (BPM)', pct: 59, q: 36, inc: 'alta' },
+      { nome: 'BPM, BPMN e CBOK', pct: 39, q: 21, inc: 'alta' },
+      { nome: 'OKR — Objetivos e Resultados-Chave', pct: 38, q: 16, inc: 'alta' },
+      { nome: 'Governança Pública', pct: 53, q: 23, inc: 'alta' },
+      { nome: 'Gestão do Conhecimento', pct: 69, q: 22, inc: 'média' },
+      { nome: 'Teorias Administrativas', pct: 72, q: 21, inc: 'média' },
+      { nome: 'Reforma Gerencial no Brasil', pct: 68, q: 31, inc: 'alta' },
+      { nome: 'Gestão da Qualidade (ISO, FNQ)', pct: 72, q: 99, inc: 'alta' },
+      { nome: 'Modelo de Excelência Gerencial (FNQ)', pct: 56, q: 9, inc: 'média' },
+      { nome: 'Departamentalização', pct: 66, q: 32, inc: 'alta' },
+      { nome: 'Gestão de Conflitos', pct: 72, q: 124, inc: 'altíssima' },
+      { nome: 'Indicadores de Desempenho', pct: 75, q: 63, inc: 'alta' },
+      { nome: 'Marketing (Adm. Pública)', pct: 27, q: 15, inc: 'baixa' },
+      { nome: 'Redes e Alianças Organizacionais', pct: 40, q: 5, inc: 'baixa' },
+      { nome: 'Gestão de Projetos PMBOK — geral', pct: 70, q: 204, inc: 'alta' },
+    ]
+  },
+  { key: 'gp', nome: 'Gestão de Pessoas', cargo: 'Analista', peso: 2, pct: 78, questoes: 568, cat: 'especifico',
+    topicos: [
+      { nome: 'Motivação (teorias e aplicações)', pct: 79, q: 250, inc: 'altíssima' },
+      { nome: 'Liderança (estilos e teorias)', pct: 74, q: 254, inc: 'altíssima' },
+      { nome: 'Avaliação e Gestão de Desempenho', pct: 89, q: 315, inc: 'altíssima' },
+      { nome: 'Cultura Organizacional (GP)', pct: 81, q: 144, inc: 'alta' },
+      { nome: 'Gestão de Conflitos (GP)', pct: 72, q: 124, inc: 'alta' },
+      { nome: 'Treinamento, Desenvolvimento e Educação', pct: 55, q: 22, inc: 'alta' },
+      { nome: 'Recrutamento e Seleção', pct: 63, q: 29, inc: 'alta' },
+      { nome: 'Modelos Básicos de Gestão de Pessoas', pct: 47, q: 47, inc: 'altíssima' },
+      { nome: 'Gestão Estratégica de Pessoas', pct: 58, q: 19, inc: 'alta' },
+      { nome: 'Clima Organizacional', pct: 69, q: 47, inc: 'alta' },
+      { nome: 'Análise e Descrição de Cargos', pct: 69, q: 38, inc: 'alta' },
+      { nome: 'QVT — Qualidade de Vida no Trabalho', pct: 67, q: 12, inc: 'média' },
+      { nome: 'Grupos e Equipes de Trabalho', pct: 59, q: 29, inc: 'alta' },
+      { nome: 'Delegação e Empowerment', pct: 67, q: 9, inc: 'média' },
+      { nome: 'Indicadores de Desempenho (GP)', pct: 75, q: 27, inc: 'alta' },
+    ]
+  },
+  { key: 'afo', nome: 'AFO — Adm. Financeira e Orçamentária', cargo: 'Analista', peso: 2, pct: 70, questoes: 810, cat: 'especifico',
+    topicos: [
+      { nome: 'Classificação da Despesa Orçamentária', pct: 64, q: 119, inc: 'altíssima' },
+      { nome: 'Créditos Adicionais', pct: 76, q: 73, inc: 'altíssima' },
+      { nome: 'Princípios Orçamentários', pct: 78, q: 45, inc: 'alta' },
+      { nome: 'Receita Pública — Classificação por Natureza', pct: 62, q: 44, inc: 'alta' },
+      { nome: 'Despesas com Pessoal (LRF arts. 18-24)', pct: 75, q: 30, inc: 'alta' },
+      { nome: 'LOA — Lei Orçamentária Anual', pct: 68, q: 88, inc: 'alta' },
+      { nome: 'LDO — Lei de Diretrizes Orçamentárias', pct: 20, q: 10, inc: 'alta' },
+      { nome: 'Instrumentos (PPA, LDO, LOA)', pct: 65, q: 114, inc: 'altíssima' },
+      { nome: 'Restos a Pagar', pct: 63, q: 37, inc: 'alta' },
+      { nome: 'Estágios da Despesa Pública', pct: 75, q: 51, inc: 'alta' },
+      { nome: 'Despesa Pública — Conceitos Gerais', pct: 66, q: 238, inc: 'altíssima' },
+      { nome: 'Ciclo Orçamentário', pct: 55, q: 11, inc: 'alta' },
+      { nome: 'Programação e Descentralização Orçamentária', pct: 60, q: 30, inc: 'média' },
+      { nome: 'Lei de Responsabilidade Fiscal (LRF geral)', pct: 80, q: 45, inc: 'alta' },
+      { nome: 'Dívida Ativa', pct: 74, q: 53, inc: 'alta' },
+      { nome: 'Receita Pública — Estágios', pct: 80, q: 34, inc: 'alta' },
+      { nome: 'Geração de Despesa — LRF arts. 15-17', pct: 0, q: 2, inc: 'média' },
+      { nome: 'Planejamento/Orçamento — LRF arts. 3-10', pct: 75, q: 8, inc: 'alta' },
+      { nome: 'Classificações do Orçamento Público', pct: 82, q: 55, inc: 'alta' },
+    ]
+  },
+  { key: 'pmbok', nome: 'Gestão de Projetos (PMBOK)', cargo: 'Analista', peso: 1, pct: 70, questoes: 204, cat: 'especifico',
+    topicos: [
+      { nome: 'PMBOK 7ª Edição — Tópicos Específicos', pct: 49, q: 35, inc: 'alta' },
+      { nome: 'Domínios de Desempenho de Projetos', pct: 37, q: 22, inc: 'alta' },
+      { nome: 'Ciclo de Vida de Projetos', pct: 56, q: 20, inc: 'alta' },
+      { nome: 'Modelos, Métodos e Artefatos', pct: 34, q: 6, inc: 'alta' },
+      { nome: 'Áreas de Conhecimento PMBOK 6ª Ed.', pct: 64, q: 33, inc: 'alta' },
+      { nome: 'EAP — Estrutura Analítica', pct: 50, q: 8, inc: 'média' },
+      { nome: 'Ferramentas e Técnicas de Projetos', pct: 78, q: 67, inc: 'alta' },
+      { nome: 'Diagrama de Redes, PERT, CPM', pct: 80, q: 54, inc: 'alta' },
+      { nome: 'Gerenciamento de Riscos', pct: 75, q: 12, inc: 'alta' },
+      { nome: 'Gerenciamento das Comunicações', pct: 34, q: 3, inc: 'média' },
+    ]
+  },
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let state = {
+  erros: [],
+  sessoes: [],
+  simulados: [],
+  checklistState: {},
+  planoDone: {},
+  currentDiagTab: 'fraco',
+  currentSimTab: 'focado',
+  currentSimConfig: null,
+  currentSimAnswers: {},
+};
+
+// ── SYNC STATUS ──────────────────────────────────────────────
+let _syncPaused = false; // evita loop ao receber atualização remota
+
+function showSyncStatus(msg, color) {
+  let el = document.getElementById('sync-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.background = color || '#edf7f1';
+  el.style.color = color === '#fef0ec' ? '#8c2f18' : '#1a6640';
+  el.style.opacity = '1';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.style.opacity = '0'; }, 2500);
+}
+
+async function loadState() {
+  try {
+    const snapshot = await db.ref('mpal_state').get();
+    if (snapshot.exists()) {
+      state = { ...state, ...snapshot.val() };
+      // Migra dados antigos do localStorage para Firebase (executa só uma vez)
+      localStorage.removeItem('mpal_state');
+    } else {
+      // Primeira vez: tenta migrar localStorage para Firebase
+      const saved = localStorage.getItem('mpal_state');
+      if (saved) {
+        state = { ...state, ...JSON.parse(saved) };
+        await db.ref('mpal_state').set(state);
+        localStorage.removeItem('mpal_state');
+      }
+    }
+    // Listener em tempo real: atualiza automaticamente em outros dispositivos
+    db.ref('mpal_state').on('value', (snap) => {
+      if (_syncPaused || !snap.exists()) return;
+      const remote = snap.val();
+      state = { ...state, ...remote };
+      // Re-renderiza a página atual silenciosamente
+      try { renderCurrentPage(); } catch(e) {}
+      showSyncStatus('✓ Sincronizado', '#edf7f1');
+    });
+  } catch(e) {
+    // Fallback: usa localStorage se Firebase falhar (sem internet)
+    try {
+      const saved = localStorage.getItem('mpal_state');
+      if (saved) state = { ...state, ...JSON.parse(saved) };
+    } catch(e2) {}
+    showSyncStatus('⚠ Offline — dados locais', '#fef0ec');
+  }
+}
+
+function saveState() {
+  try {
+    // Salva localmente como backup offline
+    localStorage.setItem('mpal_state', JSON.stringify(state));
+    // Salva na nuvem (pausa listener para não criar loop)
+    _syncPaused = true;
+    db.ref('mpal_state').set(state).then(() => {
+      _syncPaused = false;
+      showSyncStatus('✓ Salvo na nuvem', '#edf7f1');
+    }).catch(() => {
+      _syncPaused = false;
+      showSyncStatus('⚠ Offline — salvo localmente', '#fef9ec');
+    });
+  } catch(e) {}
+}
+
+function renderCurrentPage() {
+  const activePage = document.querySelector('.page.active');
+  if (!activePage) return;
+  const id = activePage.id;
+  if (id === 'page-dashboard') renderDashboard();
+  else if (id === 'page-plano') renderPlano();
+  else if (id === 'page-atualizar') renderAtualizar();
+  else if (id === 'page-diagnostico') renderDiagnostico();
+  else if (id === 'page-simulado') renderSimulado();
+  else if (id === 'page-overview') renderOverview();
+  else if (id === 'page-checklist') renderChecklist();
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function getStatus(pct) {
+  if (pct < 70) return 'weak';
+  if (pct <= 85) return 'mid';
+  return 'strong';
+}
+function getStatusLabel(pct) {
+  const s = getStatus(pct);
+  if (s === 'weak') return 'Fraco';
+  if (s === 'mid') return 'Médio';
+  return 'Forte';
+}
+function getStatusClass(pct) {
+  const s = getStatus(pct);
+  if (s === 'weak') return 'badge-weak';
+  if (s === 'mid') return 'badge-mid';
+  return 'badge-strong';
+}
+function getFillClass(pct) {
+  if (pct < 70) return 'fill-weak';
+  if (pct <= 85) return 'fill-mid';
+  return 'fill-strong';
+}
+function getStatusColor(pct) {
+  if (pct < 70) return 'var(--accent)';
+  if (pct <= 85) return 'var(--warn)';
+  return 'var(--accent3)';
+}
+
+// Get ALL topics flat
+function getAllTopics() {
+  const all = [];
+  for (const disc of DISCIPLINAS_MPAL) {
+    for (const t of disc.topicos) {
+      all.push({ ...t, disc: disc.key, discNome: disc.nome, peso: disc.peso });
+    }
+  }
+  return all;
+}
+
+// Priority score: lower = more urgent
+function getPriority(topic) {
+  const incScore = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 }[topic.inc] || 2;
+  return topic.pct - (incScore * 5); // lower pct + high incidence = top priority
+}
+
+function getWeakTopics() {
+  return getAllTopics().filter(t => t.pct < 70).sort((a, b) => getPriority(a) - getPriority(b));
+}
+
+function getMidTopics() {
+  return getAllTopics().filter(t => t.pct >= 70 && t.pct <= 85).sort((a, b) => a.pct - b.pct);
+}
+
+function calcMediaGeral() {
+  const all = getAllTopics().filter(t => t.q > 3);
+  const total = all.reduce((s, t) => s + t.q, 0);
+  const acertos = all.reduce((s, t) => s + Math.round(t.q * t.pct / 100), 0);
+  return total > 0 ? Math.round(acertos / total * 100) : 0;
+}
+
+// ============================================================
+// COUNTDOWN
+// ============================================================
+function updateCountdown() {
+  const today = new Date();
+  const diff = Math.ceil((EXAM_DATE - today) / (1000 * 60 * 60 * 24));
+  const el = document.getElementById('countdown-days');
+  if (el) el.textContent = diff > 0 ? diff : '🎯';
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id)?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes(id)) n.classList.add('active');
+  });
+  renderPage(id);
+  window.scrollTo(0, 0);
+}
+
+function renderPage(id) {
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'diagnostico') renderDiagnostico();
+  if (id === 'plano') renderPlanoContainer();
+  if (id === 'disciplinas') renderDisciplinas();
+  if (id === 'topicos') renderTopicos();
+  if (id === 'checklist') renderChecklist();
+  if (id === 'revisao') renderRevisao();
+  if (id === 'progresso') renderProgresso();
+  if (id === 'atualizar') { renderAtualizar(); renderTabelaTopicos(); }
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const all = getAllTopicsAtual().filter(t => t.q >= 3);
+  const weak = all.filter(t => t.pctAtual < 70);
+  const mid = all.filter(t => t.pctAtual >= 70 && t.pctAtual <= 85);
+  const strong = all.filter(t => t.pctAtual > 85);
+  const media = calcMediaGeralAtual();
+
+  document.getElementById('stat-media').textContent = media + '%';
+  document.getElementById('prog-media').style.width = media + '%';
+  const mEl = document.getElementById('prog-media');
+  mEl.className = 'prog-bar-fill ' + getFillClass(media);
+
+  document.getElementById('stat-fraco').textContent = weak.length;
+  document.getElementById('stat-medio').textContent = mid.length;
+  document.getElementById('stat-forte').textContent = strong.length;
+  document.getElementById('weak-count').textContent = weak.length;
+
+  // Top 10 priority usando dados atuais
+  const top10 = getWeakTopicsAtual().filter(t => t.q >= 5).slice(0, 10);
+  const top10El = document.getElementById('top10-list');
+  if (top10El) {
+    top10El.innerHTML = top10.map((t, i) => `
+      <div class="topic-row">
+        <div class="topic-rank">${i+1}</div>
+        <div class="topic-info">
+          <div class="topic-name">${t.nome}</div>
+          <div class="topic-meta">${t.discNome.split('(')[0].trim()} · ${t.q} questões · Incidência: ${t.inc}</div>
+          <div class="prog-bar sm"><div class="prog-bar-fill fill-weak" style="width:${t.pctAtual}%"></div></div>
+        </div>
+        <div class="topic-pct status-weak">${t.pctAtual}%</div>
+      </div>
+    `).join('');
+  }
+
+  // Disciplinas overview com pct atualizado
+  const discEl = document.getElementById('disc-overview');
+  if (discEl) {
+    discEl.innerHTML = DISCIPLINAS_MPAL.map(d => {
+      // Calcular média ponderada atualizada da disciplina
+      const tops = d.topicos.map(t => ({ ...t, pctAtual: getPctCombinado(d.key, t.nome, t.pct, t.q) }));
+      const totalQ = tops.reduce((s, t) => s + t.q, 0);
+      const totalAc = tops.reduce((s, t) => s + Math.round(t.q * t.pctAtual / 100), 0);
+      const pctDisc = totalQ > 0 ? Math.round(totalAc / totalQ * 100) : d.pct;
+      const delta = pctDisc - d.pct;
+      const deltaHtml = delta !== 0 ? ` <span style="font-size:10px;color:${delta>0?'var(--accent3)':'var(--accent)'}">${delta>0?'▲+':'▼'}${delta}%</span>` : '';
+      return `
+        <div class="disc-bar-row">
+          <div class="disc-bar-top">
+            <span class="disc-bar-name">${d.nome.replace(' (Específico)','').replace(' — Adm. Financeira e Orçamentária','').replace(' (PMBOK)','')}</span>
+            <span class="disc-bar-val" style="color:${getStatusColor(pctDisc)}">${pctDisc}%${deltaHtml}</span>
+          </div>
+          <div class="prog-bar"><div class="prog-bar-fill ${getFillClass(pctDisc)}" style="width:${pctDisc}%"></div></div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// ============================================================
+// DIAGNÓSTICO
+// ============================================================
+function setDiagTab(tab, el) {
+  state.currentDiagTab = tab;
+  document.querySelectorAll('#page-diagnostico .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderDiagnostico();
+}
+
+function renderDiagnostico() {
+  const tab = state.currentDiagTab;
+  let topics = getAllTopicsAtual().filter(t => t.q >= 3);
+  if (tab === 'fraco') topics = topics.filter(t => t.pctAtual < 70);
+  else if (tab === 'medio') topics = topics.filter(t => t.pctAtual >= 70 && t.pctAtual <= 85);
+  else if (tab === 'forte') topics = topics.filter(t => t.pctAtual > 85);
+  topics.sort((a, b) => tab === 'forte' ? b.pctAtual - a.pctAtual : a.pctAtual - b.pctAtual);
+
+  const el = document.getElementById('diag-list');
+  if (!el) return;
+
+  if (topics.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum tópico nesta categoria.</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <table class="data-table" style="width:100%">
+      <thead><tr>
+        <th>#</th><th>Tópico</th><th>Disciplina</th><th>Questões</th><th>% Atual</th><th>Evolução</th><th>Incidência FCC</th>
+      </tr></thead>
+      <tbody>
+        ${topics.map((t, i) => {
+          const delta = t.pctAtual - t.pctBase;
+          const deltaStr = delta > 0 ? `<span style="color:var(--accent3);font-weight:600">▲+${delta}%</span>` : delta < 0 ? `<span style="color:var(--accent)">▼${delta}%</span>` : '<span style="color:var(--text3)">—</span>';
+          return `
+          <tr>
+            <td style="color:var(--text3);font-size:12px">${i+1}</td>
+            <td class="disc-name" style="font-size:12px">${t.nome}</td>
+            <td><span style="font-size:11px;color:var(--text2)">${t.discNome.replace(' (Específico)','').replace(' — Adm. Financeira e Orçamentária','')}</span></td>
+            <td style="text-align:right;font-size:12px">${t.q}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-family:'Syne';font-weight:700;color:${getStatusColor(t.pctAtual)}">${t.pctAtual}%</span>
+                <div class="prog-bar" style="width:60px"><div class="prog-bar-fill ${getFillClass(t.pctAtual)}" style="width:${t.pctAtual}%"></div></div>
+              </div>
+            </td>
+            <td>${deltaStr}</td>
+            <td><span style="font-size:11px;text-transform:capitalize;color:var(--text2)">${t.inc}</span></td>
+          </tr>
+        `}).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ============================================================
+// PLANO DIÁRIO
+// ============================================================
+// ============================================================
+// SISTEMA DE TÓPICOS DINÂMICO — percentuais atualizáveis
+// ============================================================
+
+// Retorna o percentual atual de um tópico (base + sessões registradas)
+function getPctAtual(discKey, topicoNome) {
+  if (!state.sessoes) return null;
+  // Coleta todas as sessões daquele tópico
+  const matches = state.sessoes.filter(s =>
+    s.disc === discKey &&
+    s.topico.toLowerCase().trim() === topicoNome.toLowerCase().trim()
+  );
+  if (matches.length === 0) return null;
+  const totalQ = matches.reduce((a, s) => a + s.qtd, 0);
+  const totalAc = matches.reduce((a, s) => a + s.acertos, 0);
+  return Math.round(totalAc / totalQ * 100);
+}
+
+// Retorna percentual combinado (base ponderada com sessões)
+function getPctCombinado(discKey, topicoNome, pctBase, qBase) {
+  if (!state.sessoes) return pctBase;
+  const matches = state.sessoes.filter(s =>
+    s.disc === discKey &&
+    s.topico.toLowerCase().trim() === topicoNome.toLowerCase().trim()
+  );
+  if (matches.length === 0) return pctBase;
+  const totalQ = matches.reduce((a, s) => a + s.qtd, 0);
+  const totalAc = matches.reduce((a, s) => a + s.acertos, 0);
+  // Média ponderada: base + novos
+  const acBase = Math.round(qBase * pctBase / 100);
+  const novoTotal = qBase + totalQ;
+  return Math.round((acBase + totalAc) / novoTotal * 100);
+}
+
+// getAllTopics com percentuais atualizados
+function getAllTopicsAtual() {
+  const all = [];
+  for (const disc of DISCIPLINAS_MPAL) {
+    for (const t of disc.topicos) {
+      const pctAtual = getPctCombinado(disc.key, t.nome, t.pct, t.q);
+      all.push({ ...t, disc: disc.key, discNome: disc.nome, peso: disc.peso, pctAtual, pctBase: t.pct });
+    }
+  }
+  return all;
+}
+
+function getWeakTopicsAtual() {
+  return getAllTopicsAtual().filter(t => t.pctAtual < 70).sort((a, b) => getPriorityAtual(a) - getPriorityAtual(b));
+}
+function getMidTopicsAtual() {
+  return getAllTopicsAtual().filter(t => t.pctAtual >= 70 && t.pctAtual <= 85).sort((a, b) => a.pctAtual - b.pctAtual);
+}
+function getPriorityAtual(topic) {
+  const incScore = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 }[topic.inc] || 2;
+  return topic.pctAtual - (incScore * 5);
+}
+function calcMediaGeralAtual() {
+  const all = getAllTopicsAtual().filter(t => t.q > 3);
+  const total = all.reduce((s, t) => s + t.q, 0);
+  const acertos = all.reduce((s, t) => s + Math.round(t.q * t.pctAtual / 100), 0);
+  return total > 0 ? Math.round(acertos / total * 100) : 0;
+}
+
+// ============================================================
+// CRONOGRAMA INTELIGENTE
+// ============================================================
+
+const CUTOFF_DATE = new Date('2026-05-02'); // 15 dias antes da prova
+const EXAM_DATE_LOCAL = new Date('2026-05-17');
+
+function getDiasUteis(de, ate) {
+  let dias = 0, cur = new Date(de);
+  while (cur <= ate) {
+    const dow = cur.getDay();
+    if (dow !== 0) dias++; // conta domingo como disponível (concurseiro estuda domingo!)
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dias;
+}
+
+function getFaseAtual(hoje) {
+  const diasParaCutoff = Math.ceil((CUTOFF_DATE - hoje) / 86400000);
+  const diasParaProva  = Math.ceil((EXAM_DATE_LOCAL - hoje) / 86400000);
+  if (diasParaProva <= 0) return { nome: '🎯 Prova!', desc: 'Dia da prova!' };
+  if (diasParaCutoff <= 0) return { nome: '🔒 Reta Final', desc: 'Somente revisão e simulados. Nenhum conteúdo novo.' };
+  if (diasParaCutoff <= 14) return { nome: '⚡ Intensivo', desc: 'Últimas semanas de conteúdo — máximo foco nos fracos.' };
+  if (diasParaCutoff <= 30) return { nome: '📈 Consolidação', desc: 'Subir médios para fortes + simulados semanais.' };
+  return { nome: '🔥 Ataque', desc: 'Destruir os tópicos fracos um a um.' };
+}
+
+// Monta lista ordenada de tópicos a estudar: fracos por prioridade, depois médios
+// Monta lista ordenada de tópicos a estudar para o cronograma
+// Inclui: fracos + sem_questoes (prioridade máxima) + médios (por peso/incidência)
+function getTopicosParaCronograma() {
+  const all = getAllTopicsAtual();
+
+  // 1. Fracos (<70%) — prioridade máxima
+  const fracos = all.filter(t => t.pctAtual < 70 && t.q >= 3)
+    .sort((a, b) => getPriorityAtual(a) - getPriorityAtual(b));
+
+  // 2. Tópicos do edital SEM questões feitas — precisam ser estudados do zero
+  const semQuestoes = [];
+  CHECKLIST_DATA.forEach(sec => {
+    sec.topicos.forEach(item => {
+      const qBase = typeof item === 'string' ? 0 : (item.q || 0);
+      const txt = typeof item === 'string' ? item : item.t;
+      if (qBase === 0) {
+        semQuestoes.push({
+          nome: txt,
+          pctAtual: 0,
+          pctBase: 0,
+          q: 0,
+          disc: sec.cargo,
+          discNome: sec.disc.replace(/[📝⚖️🏛️📋🏢📊👥💰]/gu, '').trim(),
+          peso: sec.cargo === 'analista' ? 2 : 1,
+          inc: 'média',
+          semQuestoes: true,
+        });
+      }
+    });
+  });
+
+  // 3. Médios (70-85%) ordenados por: peso desc, então pct asc
+  // — só os de peso 2 primeiro, depois peso 1
+  const medios = all.filter(t => t.pctAtual >= 70 && t.pctAtual <= 85 && t.q >= 5)
+    .sort((a, b) => {
+      if (b.peso !== a.peso) return b.peso - a.peso; // peso maior primeiro
+      if (b.inc !== a.inc) {
+        const s = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
+        return (s[b.inc]||2) - (s[a.inc]||2); // maior incidência primeiro
+      }
+      return a.pctAtual - b.pctAtual; // menor % primeiro
+    });
+
+  return { fracos, semQuestoes, medios };
+}
+function buildCronograma() {
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const diasTotais = getDiasUteis(hoje, CUTOFF_DATE);
+  const { fracos, semQuestoes, medios } = getTopicosParaCronograma();
+  const tpdFraco = Math.max(1, Math.min(2, Math.ceil((fracos.length + semQuestoes.length) / Math.max(diasTotais * 0.7, 1))));
+  const tpdMedio = Math.max(1, Math.ceil(medios.length / Math.max(diasTotais * 0.5, 1)));
+  const topicosTotal = fracos.length + semQuestoes.length + medios.length;
+
+  const dias = [];
+  let fracoIdx = 0, semQIdx = 0, medioIdx = 0;
+  let cur = new Date(hoje);
+
+  while (cur <= CUTOFF_DATE) {
+    const dow = cur.getDay();
+    const dateStr = cur.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' });
+    const isoStr = cur.toISOString().slice(0,10);
+    const isHoje = isoStr === new Date().toISOString().slice(0,10);
+    const isWeekend = dow === 0 || dow === 6;
+
+    if (isWeekend) {
+      const ultimos = dias.slice(-5).flatMap(d => d.blocos.flatMap(b => b.itens.filter(i => !i.simulado).slice(0,2))).slice(0,4);
+      dias.push({
+        isoStr, dateStr, isHoje, isWeekend: true, tipo: dow === 6 ? 'revisao' : 'simulado',
+        blocos: [{
+          tipo: dow === 6 ? 'revisao' : 'simulado',
+          hora: '08:00 – 12:00',
+          nome: dow === 6 ? '🔁 Revisão Semanal — Tópicos da Semana' : '📝 Simulado Semanal (60 questões estilo FCC)',
+          itens: dow === 6
+            ? (ultimos.length > 0
+                ? ultimos.map(i => ({ ...i, detalhe: 'Revisão — 10 questões de fixação + gabarito comentado' }))
+                : [{ nome: 'Revisão geral dos tópicos mais fracos', detalhe: 'Questões dos 5 piores tópicos da semana — focar nos erros' }])
+            : [{ nome: 'Simulado completo — todas as disciplinas do edital MPAL', detalhe: '60 questões distribuídas por peso FCC · Cronometre 3h · Analise cada erro', simulado: true }]
+        }]
+      });
+    } else {
+      const blocos = [];
+      const loteFraco = [], loteSem = [], loteMedio = [];
+
+      for (let i = 0; i < tpdFraco && fracoIdx < fracos.length; i++, fracoIdx++) loteFraco.push(fracos[fracoIdx]);
+      for (let i = loteFraco.length; i < tpdFraco && semQIdx < semQuestoes.length; i++, semQIdx++) loteSem.push(semQuestoes[semQIdx]);
+      if (medioIdx < medios.length) loteMedio.push(medios[medioIdx++]);
+
+      // Revisão rápida (30 min)
+      blocos.push({ tipo: 'revisao', hora: '07:00 – 07:30', nome: '🔁 Revisão Rápida — Erros de Ontem',
+        itens: [{ nome: 'Questões erradas do dia anterior', detalhe: '5 questões dos tópicos que errou ontem — sem pular nenhum' }] });
+
+      // Foco fracos/sem-questões (90 min)
+      if (loteFraco.length > 0 || loteSem.length > 0) {
+        const itens = [
+          ...loteFraco.map(t => ({ nome: t.nome, detalhe: `🔴 ${t.pctAtual}% atual · ${t.discNome.split(' ')[0]} · Meta: ≥90% · 20 questões FCC · Anotar todos os erros`, pct: t.pctAtual })),
+          ...loteSem.map(t => ({ nome: t.nome, detalhe: `📭 Sem questões feitas · ${t.discNome.split(/[-—]/)[0].trim()} · Estudar conceito + 15 questões iniciais · Tópico do edital ainda não trabalhado`, pct: null }))
+        ];
+        blocos.push({ tipo: 'foco', hora: '07:30 – 09:00', nome: `🔥 Foco Total — Críticos${loteSem.length > 0 ? ' + Novos do Edital' : ''}`, itens });
+      }
+
+      // Consolidação médio (45 min)
+      if (loteMedio.length > 0) {
+        blocos.push({ tipo: 'consolidacao', hora: '09:00 – 09:45', nome: '📈 Consolidação — Subir Médio para 90%+',
+          itens: loteMedio.map(t => ({ nome: t.nome, detalhe: `🟡 ${t.pctAtual}% atual · ${t.discNome.split(' ')[0]} · 15 questões · Foco nos pontos de erro`, pct: t.pctAtual })) });
+      }
+
+      // Mini-simulado (30 min)
+      const tudo = [...loteFraco, ...loteSem, ...loteMedio];
+      blocos.push(tudo.length > 0
+        ? { tipo: 'simulado', hora: loteMedio.length > 0 ? '09:45 – 10:15' : '09:00 – 09:30', nome: '📝 Mini-Simulado de Fechamento',
+            itens: [{ nome: `${tudo.length * 5} questões misturadas dos tópicos do dia`, detalhe: 'Condição de prova — sem consulta — cronometre — registre erros para revisão amanhã' }] }
+        : { tipo: 'simulado', hora: '07:00 – 11:00', nome: '📝 Todos os Tópicos Cobertos — Simulado!',
+            itens: [{ nome: 'Simulado completo de fixação', detalhe: 'Parabéns! Todos os tópicos foram cobertos. Foco total em simulados e revisão de erros.' }] });
+
+      // ── PORTUGUÊS: bloco fixo 5x/semana (todos os dias úteis) ──
+      // Tópicos rotacionam pela lista de fracos/médios de português
+      const ptTopicos = [
+        { nome: 'Concordância nominal e concordância verbal',      pct: 61, dica: '20 questões · tópico mais cobrado da FCC em Português' },
+        { nome: 'Regência nominal e regência verbal',              pct: 60, dica: '15 questões · verbos de regência especial: aspirar, assistir, visar, obedecer' },
+        { nome: 'Emprego do sinal indicativo de crase',            pct: 55, dica: '15 questões · regras: locuções adverbiais, pronomes demonstrativos, aquela/aquilo' },
+        { nome: 'Coordenação e subordinação',                      pct: 42, dica: '15 questões · identificar tipo de oração e conectivo adequado' },
+        { nome: 'Pronomes (uso, colocação e casos especiais)',      pct: 64, dica: '15 questões · pronomes relativos, pessoais, colocação pronominal' },
+        { nome: 'Vozes do verbo (ativa, passiva, reflexiva)',       pct: 69, dica: '15 questões · transformação de voz + identificação em texto' },
+        { nome: 'Reescrita e equivalência de estruturas',          pct: 70, dica: '15 questões · substituição sem alterar sentido — item frequente na FCC' },
+        { nome: 'Pontuação (vírgula, ponto-e-vírgula, dois-pontos)', pct: 73, dica: '15 questões · vírgula com orações adjetivas e adjuntos adverbiais deslocados' },
+        { nome: 'Morfossintaxe (classes e funções das palavras)',   pct: 76, dica: '10 questões · identificar classe e função na frase' },
+        { nome: 'Compreensão e interpretação de textos',           pct: 79, dica: '10 questões · textos longos estilo FCC · marcar inferências x dados explícitos' },
+      ];
+      // Índice do dia (conta dias úteis desde hoje)
+      const ptIdx = dias.filter(d => !d.isWeekend).length % ptTopicos.length;
+      const ptHoje = ptTopicos[ptIdx];
+      blocos.push({
+        tipo: 'portugues',
+        hora: '10:15 – 11:00',
+        nome: '📝 Português — Bloco Diário (5x/semana)',
+        itens: [{
+          nome: ptHoje.nome,
+          detalhe: `${ptHoje.pct}% base · ${ptHoje.dica}`,
+          pct: ptHoje.pct
+        }]
+      });
+
+      dias.push({ isoStr, dateStr, isHoje, isWeekend: false, blocos, topicosCount: loteFraco.length + loteSem.length + loteMedio.length });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const retaFinal = [];
+  const rfStart = new Date(CUTOFF_DATE); rfStart.setDate(rfStart.getDate() + 1);
+  let rfCur = new Date(rfStart);
+  while (rfCur <= EXAM_DATE_LOCAL) {
+    const dateStr = rfCur.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' });
+    const isoStr = rfCur.toISOString().slice(0,10);
+    const isHoje = isoStr === new Date().toISOString().slice(0,10);
+    const diasParaProva = Math.ceil((EXAM_DATE_LOCAL - rfCur) / 86400000);
+    if (diasParaProva === 0) {
+      retaFinal.push({ isoStr, dateStr, isHoje, isRetaFinal: true, blocos: [{ tipo: 'prova', hora: '08:00 / 14:00', nome: '🎯 DIA DA PROVA — MPAL 2026',
+        itens: [{ nome: 'Técnico do MP — Manhã (08h)', detalhe: 'Chegue 1h antes · caneta preta/azul · documento com foto · boleto pago' },
+                { nome: 'Analista Gestão Pública — Tarde (14h)', detalhe: 'Almoço leve · descanse entre as provas · foco total' }] }] });
+    } else {
+      const tipo = diasParaProva <= 3 ? 'descanso' : diasParaProva <= 7 ? 'revisao_final' : 'simulado_final';
+      retaFinal.push({ isoStr, dateStr, isHoje, isRetaFinal: true, diasParaProva, blocos: [{
+        tipo, hora: tipo === 'descanso' ? '08:00 – 10:00' : '07:00 – 11:00',
+        nome: tipo === 'descanso' ? `🧘 D-${diasParaProva} — Revisão Leve + Descanso Mental`
+            : tipo === 'simulado_final' ? `📝 D-${diasParaProva} — Simulado Completo (Prova Real)` : `🔁 D-${diasParaProva} — Revisão Intensiva dos Mais Fracos`,
+        itens: tipo === 'descanso'
+          ? [{ nome: 'Revisar apenas anotações, gabaritos e resumos', detalhe: 'Nenhum conteúdo novo — descanso mental É desempenho. Durma bem.' }]
+          : tipo === 'simulado_final'
+          ? [{ nome: 'Simulado cronometrado — 60 questões', detalhe: 'Simule as condições exatas: horário, local, caneta. Analise erros após.' }]
+          : [{ nome: 'Revisão dos 10 tópicos mais fracos do ciclo completo', detalhe: '10 questões de cada tópico crítico — consolidar os ganhos do estudo' }]
+      }] });
+    }
+    rfCur.setDate(rfCur.getDate() + 1);
+  }
+
+  return { dias, retaFinal, diasTotais, topicosTotal, tpdFraco, tpdMedio,
+           nFracos: fracos.length, nSem: semQuestoes.length, nMedios: medios.length };
+}
+
+let currentPlanoTab = 'hoje';
+function setPlanoTab(tab, el) {
+  currentPlanoTab = tab;
+  document.querySelectorAll('#page-plano .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderPlanoContainer();
+}
+
+function renderPlanoContainer() {
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const fase = getFaseAtual(hoje);
+  const diasParaCutoff = Math.ceil((CUTOFF_DATE - hoje) / 86400000);
+  const diasRestantes = getDiasUteis(hoje, CUTOFF_DATE);
+
+  // Update stats
+  const cronograma = buildCronograma();
+  const el = document.getElementById('ps-dias');
+  if (el) el.textContent = diasRestantes;
+  const el2 = document.getElementById('ps-topicos');
+  if (el2) el2.textContent = cronograma.topicosTotal;
+  const el3 = document.getElementById('ps-tpd');
+  if (el3) el3.textContent = cronograma.tpdFraco + '+' + cronograma.tpdMedio + '/dia';
+  const el4 = document.getElementById('ps-fase');
+  if (el4) el4.textContent = fase.nome;
+
+  const alertEl = document.getElementById('plano-status-text');
+  if (alertEl) {
+    if (diasParaCutoff <= 0) {
+      alertEl.innerHTML = `<strong>🔒 Reta Final ativada!</strong> Você está a ${Math.ceil((EXAM_DATE_LOCAL-hoje)/86400000)} dias da prova. Somente revisão e simulados agora.`;
+    } else {
+      alertEl.innerHTML = `<strong>${fase.nome}:</strong> ${fase.desc} · ${diasRestantes} dias disponíveis para cobrir ${cronograma.nFracos}🔴 fracos + ${cronograma.nSem}📭 sem questões + ${cronograma.nMedios}🟡 médios = ${cronograma.topicosTotal} tópicos.`;
+    }
+  }
+
+  const container = document.getElementById('plano-container');
+  if (!container) return;
+
+  let diasParaRender = [];
+  const todosOsDias = [...cronograma.dias, ...cronograma.retaFinal];
+
+  if (currentPlanoTab === 'hoje') {
+    const hojeStr = hoje.toISOString().slice(0,10);
+    diasParaRender = todosOsDias.filter(d => d.isoStr === hojeStr);
+    if (diasParaRender.length === 0) {
+      // Mostrar o próximo dia com conteúdo
+      diasParaRender = todosOsDias.filter(d => d.isoStr > hojeStr).slice(0,1);
+    }
+  } else if (currentPlanoTab === 'semana') {
+    const hojeStr = hoje.toISOString().slice(0,10);
+    const proxDias = todosOsDias.filter(d => d.isoStr >= hojeStr).slice(0, 7);
+    diasParaRender = proxDias;
+  } else {
+    diasParaRender = todosOsDias;
+  }
+
+  if (diasParaRender.length === 0) {
+    container.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:var(--text3)">Nenhum dia encontrado para o período selecionado.</div>';
+    return;
+  }
+
+  container.innerHTML = diasParaRender.map((dia, di) => {
+    const isRetaFinal = !!dia.isRetaFinal;
+    const cardBg = dia.isProva ? '#fff8e1' : isRetaFinal ? '#f0f7ff' : dia.isHoje ? '#fff' : '';
+    const borderColor = dia.isHoje ? 'var(--accent2)' : isRetaFinal ? '#c0d3f8' : 'var(--border)';
+    const label = dia.isHoje ? ' 🟢 HOJE' : '';
+
+    return `
+      <div class="plan-day" style="border:${dia.isHoje ? '2px solid var(--accent2)' : '1px solid var(--border)'}; border-radius:12px; margin-bottom:12px; overflow:hidden;">
+        <div class="plan-day-header" style="background:${dia.isHoje ? '#edf3fe' : dia.isWeekend ? '#f5f3f0' : isRetaFinal ? '#f0f7ff' : 'var(--bg)'}">
+          <div class="plan-day-num" style="background:${dia.isHoje ? 'var(--accent2)' : isRetaFinal ? 'var(--accent)' : 'var(--text)'}">${di+1}</div>
+          <div class="plan-day-title">
+            ${dia.dateStr}${label}
+            ${isRetaFinal ? ' <span style="font-size:10px;background:var(--accent);color:white;padding:2px 6px;border-radius:4px;margin-left:6px">RETA FINAL</span>' : ''}
+            ${dia.isWeekend ? ' <span style="font-size:10px;background:var(--warn);color:white;padding:2px 6px;border-radius:4px;margin-left:6px">' + (dia.tipo === 'simulado' ? 'SIMULADO' : 'REVISÃO') + '</span>' : ''}
+          </div>
+          <div class="plan-day-time">${dia.topicosCount ? `${dia.topicosCount} tópicos · ` : ''}4h</div>
+        </div>
+        <div class="plan-items" style="border:none">
+          ${dia.blocos.map((bloco, bi) => bloco.itens.map((item, ii) => {
+            const key = `${dia.isoStr}-${bi}-${ii}`;
+            const done = state.planoDone[key];
+            const pctColor = item.pct !== undefined ? getStatusColor(item.pct) : 'var(--text3)';
+            return `
+              <div class="plan-item ${done ? 'done' : ''}" onclick="togglePlanItem('${key}', this)">
+                <div class="plan-check">${done ? '✓' : ''}</div>
+                <div class="plan-item-content">
+                  <div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:2px">
+                    ${bloco.hora} · ${bloco.nome}
+                  </div>
+                  <div class="plan-item-name">
+                    ${item.nome}
+                    ${item.pct !== undefined ? `<span style="font-family:'Syne';font-size:12px;font-weight:700;color:${pctColor};margin-left:8px">${item.pct}%</span>` : ''}
+                  </div>
+                  <div class="plan-item-detail">${item.detalhe}</div>
+                </div>
+                <div class="plan-item-time">${getBlocoTipo(bloco.tipo)}</div>
+              </div>
+            `;
+          }).join('')).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getBlocoTipo(tipo) {
+  const map = { foco:'🔥 Foco', revisao:'🔁 Revisão', consolidacao:'📈 Consolid.', simulado:'📝 Simulado', portugues:'📝 Português', revisao_final:'🔁 Rev. Final', simulado_final:'📝 Sim. Final', descanso:'🧘 Descanso', prova:'🎯 PROVA' };
+  return map[tipo] || tipo;
+}
+
+function togglePlanItem(key, el) {
+  state.planoDone[key] = !state.planoDone[key];
+  el.classList.toggle('done', state.planoDone[key]);
+  el.querySelector('.plan-check').textContent = state.planoDone[key] ? '✓' : '';
+  saveState();
+  if (state.planoDone[key]) {
+    // Pequena pausa para a animação de check acontecer antes do overlay
+    setTimeout(() => checkMetaDia(key), 300);
+  }
+}
+
+// ============================================================
+// DISCIPLINAS
+// ============================================================
+function renderDisciplinas() {
+  const tbody = document.getElementById('disc-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = DISCIPLINAS_MPAL.map(d => `
+    <tr>
+      <td class="disc-name">${d.nome}</td>
+      <td><span class="badge badge-blue" style="font-size:10px">${d.cargo}</span></td>
+      <td style="text-align:center">
+        ${'★'.repeat(d.peso)}${'☆'.repeat(3-d.peso)}
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'Syne';font-weight:700;color:${getStatusColor(d.pct)}">${d.pct}%</span>
+          <div class="prog-bar" style="width:80px"><div class="prog-bar-fill ${getFillClass(d.pct)}" style="width:${d.pct}%"></div></div>
+        </div>
+      </td>
+      <td style="text-align:right;color:var(--text2)">${d.questoes.toLocaleString()}</td>
+      <td><span class="badge ${getStatusClass(d.pct)}">${getStatusLabel(d.pct)}</span></td>
+      <td>
+        <span class="badge ${d.pct < 70 ? 'badge-weak' : d.peso === 3 && d.pct < 85 ? 'badge-mid' : 'badge-strong'}">
+          ${d.pct < 70 ? '🔥 CRÍTICA' : d.peso >= 2 && d.pct < 85 ? '⚡ ALTA' : '✅ OK'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ============================================================
+// TÓPICOS CRÍTICOS
+// ============================================================
+let topicoFilter = 'todos';
+
+function filterTopicos(f) {
+  topicoFilter = f;
+  renderTopicos();
+}
+
+function renderTopicos() {
+  const el = document.getElementById('topicos-list');
+  if (!el) return;
+
+  let topics = getAllTopicsAtual().filter(t => t.q >= 3);
+  if (topicoFilter !== 'todos') topics = topics.filter(t => t.disc === topicoFilter);
+  topics = topics.filter(t => t.pctAtual < 86).sort((a, b) => getPriorityAtual(a) - getPriorityAtual(b));
+
+  if (topics.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Nenhum tópico crítico nesta disciplina. Excelente! 🎉</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <table class="data-table" style="width:100%">
+      <thead><tr>
+        <th>Rank</th><th>Tópico</th><th>Disciplina</th><th>% Atual</th><th>Base</th><th>Incidência</th><th>Ação</th>
+      </tr></thead>
+      <tbody>
+        ${topics.map((t, i) => `
+          <tr>
+            <td>${i < 5 ? `<span class="fire">${['🔥','🔥','🔥','⚡','⚡'][i]}</span>` : `<span style="color:var(--text3);font-size:12px">${i+1}</span>`}</td>
+            <td class="disc-name" style="font-size:12px">${t.nome}</td>
+            <td style="font-size:11px;color:var(--text2)">${t.discNome.split('(')[0].trim()}</td>
+            <td><span style="font-family:'Syne';font-weight:700;color:${getStatusColor(t.pctAtual)};font-size:15px">${t.pctAtual}%</span></td>
+            <td style="font-size:11px;color:var(--text3)">${t.pctBase}%</td>
+            <td><span class="badge ${t.inc==='altíssima'?'badge-weak':t.inc==='alta'?'badge-mid':'badge-strong'}" style="font-size:10px">${t.inc}</span></td>
+            <td><span style="font-size:11px;color:${getStatusColor(t.pctAtual)};font-weight:600">${t.pctAtual < 50 ? 'Estudo urgente' : t.pctAtual < 70 ? 'Priorizar questões' : 'Reforçar'}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ============================================================
+// CHECKLIST DO EDITAL
+// ============================================================
+// ============================================================
+// CHECKLIST_DATA — tópicos extraídos LITERALMENTE do Anexo II
+// do Edital nº 01/2026 — MPAL / FCC
+// Separado por cargo e seção exatamente como aparece no edital
+// ============================================================
+const CHECKLIST_DATA = [
+
+  // ── CONHECIMENTOS GERAIS — AMBOS OS CARGOS ──────────────────
+
+  {
+    cargo: 'ambos',
+    disc: '📝 Língua Portuguesa — Conhecimentos Gerais (Ambos)',
+    topicos: [
+      { t: 'Ortografia e acentuação', pct: 72, q: 75 },
+      { t: 'Emprego do sinal indicativo de crase', pct: 55, q: 22 },
+      { t: 'Compreensão e interpretação de textos de gêneros variados', pct: 79, q: 326 },
+      { t: 'Relação do texto com seu contexto histórico', pct: 79, q: 326 },
+      { t: 'Denotação e conotação', pct: 75, q: 16 },
+      { t: 'Discurso direto, discurso indireto e discurso indireto livre', pct: 75, q: 24 },
+      { t: 'Intertextualidade', pct: 0, q: 0 },
+      { t: 'Figuras de linguagem', pct: 93, q: 40 },
+      { t: 'Morfossintaxe', pct: 76, q: 244 },
+      { t: 'Elementos estruturais e processos de formação de palavras', pct: 100, q: 3 },
+      { t: 'Sinonímia e antonímia', pct: 80, q: 15 },
+      { t: 'Pontuação', pct: 73, q: 146 },
+      { t: 'Pronomes', pct: 64, q: 19 },
+      { t: 'Concordância nominal e concordância verbal', pct: 61, q: 111 },
+      { t: 'Flexão nominal e flexão verbal', pct: 0, q: 0 },
+      { t: 'Vozes do verbo', pct: 69, q: 72 },
+      { t: 'Correlação de tempos e modos verbais', pct: 78, q: 18 },
+      { t: 'Regência nominal e regência verbal', pct: 60, q: 35 },
+      { t: 'Coordenação e subordinação', pct: 42, q: 17 },
+      { t: 'Conectivos', pct: 76, q: 75 },
+      { t: 'Redação — confronto e reconhecimento de frases corretas e incorretas', pct: 70, q: 166 },
+      { t: 'Redação — organização e reorganização de orações e períodos', pct: 70, q: 166 },
+      { t: 'Redação — equivalência e transformação de estruturas', pct: 70, q: 166 },
+    ]
+  },
+
+  {
+    cargo: 'ambos',
+    disc: '⚖️ Noções de Legislação — Conhecimentos Gerais (Ambos)',
+    topicos: [
+      { t: 'Lei Orgânica do Ministério Público do Estado de Alagoas (Lei Complementar nº 15, de 1996)', pct: 86, q: 139 },
+      { t: 'Regime Jurídico Único dos Servidores Civis do Estado de Alagoas, das Autarquias e das Fundações Públicas Estaduais (Lei nº 5.247/1991)', pct: 84, q: 1002 },
+      { t: 'Organização administrativa do Ministério Público do Estado de Alagoas (Lei nº 6.306/2002)', pct: 0, q: 0 },
+    ]
+  },
+
+  // ── ESPECÍFICO TÉCNICO (CÓD. 14) ───────────────────────────
+
+  {
+    cargo: 'tecnico',
+    disc: '🏛️ Noções de Direito Constitucional — Técnico (Cód. 14)',
+    topicos: [
+      { t: 'Da aplicabilidade das normas constitucionais: normas de eficácia plena, contida e limitada; normas programáticas', pct: 83, q: 45 },
+      { t: 'Princípios fundamentais', pct: 81, q: 92 },
+      { t: 'Dos direitos e deveres individuais e coletivos', pct: 88, q: 106 },
+      { t: 'Dos direitos sociais', pct: 84, q: 62 },
+      { t: 'Dos direitos de nacionalidade', pct: 98, q: 41 },
+      { t: 'Dos direitos políticos', pct: 84, q: 61 },
+      { t: 'Dos partidos políticos', pct: 93, q: 14 },
+      { t: 'Da organização político-administrativa: da União', pct: 73, q: 37 },
+      { t: 'Das competências da União, dos Estados e dos Municípios', pct: 73, q: 37 },
+      { t: 'Da Administração Pública: disposições gerais', pct: 78, q: 62 },
+      { t: 'Dos servidores públicos', pct: 66, q: 32 },
+      { t: 'Da organização dos Poderes', pct: 72, q: 648 },
+      { t: 'Do Poder Executivo: do Presidente e do Vice-Presidente da República', pct: 79, q: 19 },
+      { t: 'Das atribuições e responsabilidades do Presidente da República', pct: 77, q: 21 },
+      { t: 'Do Poder Legislativo: do processo legislativo', pct: 68, q: 77 },
+      { t: 'Da fiscalização contábil, financeira e orçamentária', pct: 71, q: 17 },
+      { t: 'Do Poder Judiciário: disposições gerais', pct: 84, q: 54 },
+      { t: 'Do Supremo Tribunal Federal', pct: 59, q: 55 },
+      { t: 'Do Conselho Nacional de Justiça: organização e competência', pct: 39, q: 13 },
+      { t: 'Do Superior Tribunal de Justiça', pct: 70, q: 23 },
+      { t: 'Do Tribunal Superior do Trabalho, dos Tribunais Regionais do Trabalho e dos Juízes do Trabalho', pct: 69, q: 44 },
+      { t: 'Das funções essenciais à Justiça: do Ministério Público', pct: 86, q: 139 },
+      { t: 'Da Advocacia Pública', pct: 67, q: 3 },
+      { t: 'Da Advocacia e da Defensoria Pública', pct: 75, q: 8 },
+      { t: 'Ordem social: disposição geral', pct: 59, q: 46 },
+      { t: 'Da seguridade social', pct: 59, q: 46 },
+      { t: 'Do meio ambiente', pct: 88, q: 8 },
+      { t: 'Da família, da criança do adolescente, do jovem e do idoso', pct: 73, q: 11 },
+      { t: 'Dos índios', pct: 78, q: 9 },
+    ]
+  },
+
+  {
+    cargo: 'tecnico',
+    disc: '📋 Noções de Direito Administrativo — Técnico (Cód. 14)',
+    topicos: [
+      { t: 'Administração Pública', pct: 81, q: 110 },
+      { t: 'Regime jurídico administrativo', pct: 81, q: 110 },
+      { t: 'Princípios constitucionais e legais da Administração Pública', pct: 86, q: 74 },
+      { t: 'Princípios administrativos implícitos', pct: 70, q: 33 },
+      { t: 'Lei de Introdução às normas do Direito Brasileiro (Decreto-Lei nº 4.657/1942 com redação dada pela Lei nº 12.376/2010 e alterações) e sua aplicação na Administração Pública', pct: 0, q: 0 },
+      { t: 'Organização administrativa: administração direta e indireta; centralizada e descentralizada', pct: 72, q: 97 },
+      { t: 'Autarquias, fundações, empresas públicas, sociedades de economia mista', pct: 72, q: 97 },
+      { t: 'Órgãos públicos: conceito, natureza e classificação', pct: 42, q: 24 },
+      { t: 'Poderes da Administração Pública', pct: 78, q: 75 },
+      { t: 'Poderes e deveres dos administradores públicos', pct: 78, q: 75 },
+      { t: 'Uso e abuso do poder', pct: 54, q: 13 },
+      { t: 'Lei de abuso de autoridade (Lei nº 13.869/2019)', pct: 84, q: 35 },
+      { t: 'Ato administrativo — conceito, características e atributos', pct: 58, q: 50 },
+      { t: 'Elementos e requisitos de validade do ato administrativo', pct: 58, q: 50 },
+      { t: 'Classificação dos atos administrativos', pct: 77, q: 104 },
+      { t: 'Formação e efeitos do ato administrativo', pct: 58, q: 50 },
+      { t: 'Extinção, revogação, invalidação e convalidação do ato administrativo', pct: 68, q: 76 },
+      { t: 'Cassação e caducidade', pct: 68, q: 76 },
+      { t: 'Processo administrativo — Lei nº 6.161/2000', pct: 67, q: 27 },
+      { t: 'Agentes públicos: classificação', pct: 86, q: 91 },
+      { t: 'Cargo, emprego e função pública', pct: 86, q: 91 },
+      { t: 'Provimento e investidura', pct: 85, q: 19 },
+      { t: 'Exercício e afastamentos — Lei 5.247/1991', pct: 84, q: 342 },
+      { t: 'Direito de Greve', pct: 0, q: 0 },
+      { t: 'Regime constitucional dos servidores públicos na Constituição Federal', pct: 66, q: 32 },
+      { t: 'Regime de emprego público e disposições da Consolidação das Leis do Trabalho (CLT) aplicáveis', pct: 0, q: 0 },
+      { t: 'Controle da Administração Pública — classificações relativas ao controle', pct: 82, q: 16 },
+      { t: 'Controle externo e procedimentos de tomadas de contas', pct: 67, q: 3 },
+      { t: 'Lei de Improbidade Administrativa (Lei nº 8.429/1992)', pct: 84, q: 99 },
+      { t: 'Licitação: conceito, natureza jurídica, objeto e finalidade', pct: 73, q: 340 },
+      { t: 'Princípios básicos e correlatos da licitação', pct: 75, q: 8 },
+      { t: 'Modalidades de licitação', pct: 80, q: 40 },
+      { t: 'Obrigatoriedade, dispensa e inexigibilidade', pct: 66, q: 26 },
+      { t: 'Procedimento licitatório', pct: 73, q: 132 },
+      { t: 'Anulação, revogação e recursos administrativos', pct: 60, q: 15 },
+      { t: 'Sanções e procedimento sancionatório', pct: 58, q: 7 },
+      { t: 'Crimes em licitações e contratos administrativos', pct: 0, q: 0 },
+      { t: 'Lei nº 14.133/2021', pct: 73, q: 340 },
+      { t: 'Contrato administrativo: conceito, principais características e espécies', pct: 72, q: 21 },
+      { t: 'Formalização, execução e inexecução do contrato', pct: 71, q: 92 },
+      { t: 'Duração, prorrogação, renovação e extinção do contrato', pct: 100, q: 7 },
+      { t: 'Revisão e rescisão do contrato', pct: 77, q: 30 },
+      { t: 'Reajustamento', pct: 0, q: 0 },
+      { t: 'Lei de acesso à informação (Lei nº 12.527/2011)', pct: 78, q: 40 },
+      { t: 'Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018)', pct: 75, q: 30 },
+    ]
+  },
+
+  {
+    cargo: 'tecnico',
+    disc: '🏢 Noções de Administração Pública — Técnico (Cód. 14)',
+    topicos: [
+      { t: 'Características básicas das organizações formais modernas: tipos de estrutura organizacional, natureza, finalidades e critérios de departamentalização', pct: 66, q: 32 },
+      { t: 'Evolução dos modelos de Administração Pública', pct: 70, q: 33 },
+      { t: 'Convergências e diferenças entre a gestão pública e a gestão privada', pct: 93, q: 14 },
+      { t: 'Gestão da Qualidade: excelência nos serviços públicos', pct: 71, q: 51 },
+      { t: 'Gestão de pessoas', pct: 78, q: 568 },
+      { t: 'Comunicação na gestão pública e gestão de redes organizacionais', pct: 67, q: 3 },
+      { t: 'Gestão de resultados na produção de serviços públicos', pct: 0, q: 0 },
+      { t: 'Processo organizacional: planejamento, direção, coordenação, comunicação, controle e avaliação', pct: 74, q: 46 },
+      { t: 'Gestão estratégica do Ministério Público brasileiro', pct: 0, q: 0 },
+      { t: 'Negócio, missão, visão de futuro, valores', pct: 74, q: 15 },
+      { t: 'Diagnóstico organizacional', pct: 78, q: 50 },
+      { t: 'Avaliação de desempenho', pct: 89, q: 315 },
+      { t: 'Análise dos ambientes interno e externo', pct: 78, q: 50 },
+      { t: 'Tipos de decisão e processo decisório', pct: 81, q: 116 },
+      { t: 'Governança e governabilidade', pct: 53, q: 23 },
+      { t: 'Gestão de risco', pct: 0, q: 0 },
+      { t: 'Gestão por Processos', pct: 59, q: 36 },
+      { t: 'Gestão por Projetos', pct: 70, q: 204 },
+      { t: 'Gestão de contratos', pct: 73, q: 340 },
+      { t: 'Liderança', pct: 74, q: 254 },
+      { t: 'Motivação', pct: 79, q: 250 },
+      { t: 'Noções de Orçamento Público: Orçamento na Constituição Federal de 1988', pct: 84, q: 12 },
+    ]
+  },
+
+  // ── ESPECÍFICO ANALISTA GESTÃO PÚBLICA (CÓD. 02) ────────────
+
+  {
+    cargo: 'analista',
+    disc: '📊 Noções de Administração Pública — Analista Gestão Pública (Cód. 02)',
+    topicos: [
+      { t: 'A evolução da Administração Pública e a reforma do Estado', pct: 70, q: 33 },
+      { t: 'Convergências e diferenças entre a gestão pública e a gestão privada', pct: 93, q: 14 },
+      { t: 'Gestão da Qualidade: excelência nos serviços públicos', pct: 71, q: 51 },
+      { t: 'Gestão e avaliação de desempenho', pct: 89, q: 315 },
+      { t: 'Características básicas das organizações formais modernas: tipos de estrutura organizacional, natureza, finalidades e critérios de departamentalização', pct: 66, q: 32 },
+      { t: 'Gestão Organizacional', pct: 0, q: 0 },
+      { t: 'Planejamento Estratégico', pct: 83, q: 40 },
+      { t: 'Gestão estratégica: planejamento estratégico, tático e operacional', pct: 83, q: 40 },
+      { t: 'Indicadores de desempenho e de Gestão', pct: 75, q: 63 },
+      { t: 'Gestão de resultados na produção de serviços públicos', pct: 0, q: 0 },
+      { t: 'Ferramentas de análise de cenário interno e externo', pct: 78, q: 50 },
+      { t: 'Balanced Scorecard', pct: 85, q: 102 },
+      { t: 'Modelagem organizacional: conceitos básicos', pct: 0, q: 0 },
+      { t: 'Identificação e delimitação de processos de negócio', pct: 0, q: 0 },
+      { t: 'Processo organizacional: planejamento, direção, coordenação, comunicação, controle e avaliação', pct: 74, q: 46 },
+      { t: 'Técnicas de mapeamento, análise, simulação e modelagem de processos', pct: 59, q: 36 },
+      { t: 'Gestão por Processos', pct: 59, q: 36 },
+      { t: 'Grau de maturidade de processos', pct: 0, q: 0 },
+      { t: 'Gestão de contratos', pct: 73, q: 340 },
+      { t: 'Gestão por Projetos', pct: 70, q: 204 },
+      { t: 'Escritório de Projetos', pct: 0, q: 0 },
+      { t: 'Gestão de risco', pct: 0, q: 0 },
+      { t: 'A organização e o processo decisório', pct: 81, q: 116 },
+      { t: 'O processo racional de solução de problemas', pct: 81, q: 116 },
+      { t: 'Fatores que afetam a decisão', pct: 81, q: 116 },
+      { t: 'Tipos de decisão e processo decisório', pct: 81, q: 116 },
+      { t: 'Gestão de processos de mudança organizacional: Conceito de mudança', pct: 75, q: 31 },
+      { t: 'Mudança e inovação organizacional', pct: 75, q: 31 },
+      { t: 'Diagnóstico organizacional', pct: 78, q: 50 },
+      { t: 'Análise dos ambientes interno e externo', pct: 78, q: 50 },
+      { t: 'Negócio, missão, visão de futuro, valores', pct: 74, q: 15 },
+      { t: 'Avaliação da Gestão Pública — Programa Nacional de Gestão Pública e Desburocratização', pct: 71, q: 51 },
+      { t: 'Critérios de avaliação da gestão pública', pct: 71, q: 51 },
+      { t: 'O papel do agente e métodos de mudança', pct: 75, q: 31 },
+      { t: 'Comunicação na gestão pública e gestão de redes organizacionais', pct: 67, q: 3 },
+    ]
+  },
+
+  {
+    cargo: 'analista',
+    disc: '👥 Noções de Gestão de Pessoas — Analista Gestão Pública (Cód. 02)',
+    topicos: [
+      { t: 'Conceitos e práticas de Gestão de Pessoas relativas ao servidor público', pct: 47, q: 47 },
+      { t: 'Modelos de Gestão de Pessoas — fatores condicionantes de cada modelo', pct: 47, q: 47 },
+      { t: 'Planejamento e Gestão Estratégica de Pessoas', pct: 58, q: 19 },
+      { t: 'Possibilidades e limites da gestão de pessoas como diferencial competitivo para o negócio', pct: 47, q: 47 },
+      { t: 'Possibilidades e limites da gestão de pessoas no setor público', pct: 67, q: 3 },
+      { t: 'Gestão por competências e gestão do conhecimento', pct: 78, q: 54 },
+      { t: 'Gestão e avaliação de desempenho', pct: 89, q: 315 },
+      { t: 'Comportamento organizacional', pct: 59, q: 29 },
+      { t: 'Gestão de clima e cultura organizacional', pct: 69, q: 47 },
+      { t: 'Planejamento de Recursos Humanos', pct: 0, q: 0 },
+      { t: 'Gestão de conflitos', pct: 72, q: 124 },
+      { t: 'Indicadores de desempenho: tipos de indicadores', pct: 75, q: 63 },
+      { t: 'Variáveis componentes dos indicadores', pct: 75, q: 63 },
+      { t: 'Liderança, motivação e satisfação no trabalho', pct: 74, q: 254 },
+      { t: 'Qualidade de vida no trabalho', pct: 67, q: 12 },
+      { t: 'Recrutamento e seleção de pessoas', pct: 80, q: 20 },
+      { t: 'Análise e descrição de cargos', pct: 69, q: 38 },
+      { t: 'Educação, Treinamento e Desenvolvimento', pct: 55, q: 22 },
+      { t: 'Educação corporativa', pct: 100, q: 8 },
+      { t: 'Educação à distância', pct: 0, q: 0 },
+    ]
+  },
+
+  {
+    cargo: 'analista',
+    disc: '💰 Administração Financeira e Orçamentária — Analista Gestão Pública (Cód. 02)',
+    topicos: [
+      { t: 'Orçamento público: conceito', pct: 72, q: 220 },
+      { t: 'Finanças Públicas e Orçamento na Constituição Federal — Título VI — Capítulo II — Seções I e II', pct: 84, q: 12 },
+      { t: 'Princípios orçamentários', pct: 78, q: 45 },
+      { t: 'Ciclo orçamentário', pct: 55, q: 11 },
+      { t: 'O orçamento público no Brasil', pct: 82, q: 55 },
+      { t: 'Plano plurianual', pct: 65, q: 114 },
+      { t: 'Lei de Diretrizes Orçamentárias', pct: 20, q: 10 },
+      { t: 'Lei Orçamentária Anual', pct: 68, q: 88 },
+      { t: 'Sistema e processo de orçamentação', pct: 0, q: 0 },
+      { t: 'Classificações orçamentárias', pct: 64, q: 119 },
+      { t: 'Estrutura programática', pct: 0, q: 0 },
+      { t: 'Créditos ordinários e adicionais', pct: 76, q: 73 },
+      { t: 'Programação e execução orçamentária e financeira', pct: 60, q: 30 },
+      { t: 'Descentralização orçamentária e financeira', pct: 60, q: 30 },
+      { t: 'Acompanhamento da execução', pct: 0, q: 0 },
+      { t: 'Alterações orçamentárias', pct: 76, q: 73 },
+      { t: 'Receita pública: conceito e classificações', pct: 62, q: 44 },
+      { t: 'Receita pública: estágios', pct: 80, q: 34 },
+      { t: 'Receita pública: fontes', pct: 0, q: 0 },
+      { t: 'Dívida ativa', pct: 74, q: 53 },
+      { t: 'Despesa pública: conceito e classificações', pct: 64, q: 119 },
+      { t: 'Despesa pública: estágios', pct: 75, q: 51 },
+      { t: 'Restos a pagar', pct: 63, q: 37 },
+      { t: 'Despesas de exercícios anteriores', pct: 34, q: 3 },
+      { t: 'Dívida flutuante e fundada', pct: 63, q: 37 },
+      { t: 'Responsabilidade Fiscal — Lei Complementar nº 101/2000 atualizada', pct: 80, q: 45 },
+      { t: 'Lei nº 4.320/1966', pct: 50, q: 4 },
+      { t: 'Limitações das Despesas', pct: 34, q: 3 },
+      { t: 'Despesa com pessoal', pct: 100, q: 1 },
+      { t: 'Endividamento Público', pct: 50, q: 2 },
+      { t: 'Relatório de Gestão Fiscal', pct: 82, q: 29 },
+      { t: 'Transparência, controle e fiscalização', pct: 100, q: 3 },
+    ]
+  },
+];
+
+function renderChecklist(filtro) {
+  filtro = filtro || state.checklistFiltro || 'todos';
+  state.checklistFiltro = filtro;
+
+  // Atualizar botões de filtro ativos
+  document.querySelectorAll('.cl-filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.f === filtro);
+  });
+
+  const container = document.getElementById('checklist-container');
+  if (!container) return;
+
+  let total = 0, done = 0;
+  // Total geral para contadores de cima (sempre todos)
+  CHECKLIST_DATA.forEach((sec, si) => {
+    sec.topicos.forEach((_, ti) => {
+      total++;
+      if (state.checklistState[`${si}-${ti}`]) done++;
+    });
+  });
+
+  const pctGeral = total > 0 ? Math.round(done / total * 100) : 0;
+  const pctEl = document.getElementById('cl-pct');
+  if (pctEl) pctEl.textContent = pctGeral + '%';
+  const doneEl = document.getElementById('cl-done');
+  if (doneEl) doneEl.textContent = done;
+  const pendEl = document.getElementById('cl-pend');
+  if (pendEl) pendEl.textContent = total - done;
+  const totalEl = document.getElementById('cl-total');
+  if (totalEl) totalEl.textContent = total;
+
+  // Helper: get topic text and performance from new format
+  function getTopicText(item) { return typeof item === 'string' ? item : item.t; }
+  function getTopicPctBase(item) { return typeof item === 'string' ? 0 : (item.pct || 0); }
+  function getTopicQBase(item) { return typeof item === 'string' ? 0 : (item.q || 0); }
+
+  const secoesVisiveis = CHECKLIST_DATA.filter(sec =>
+    filtro === 'todos' ||
+    (filtro === 'ambos' && sec.cargo === 'ambos') ||
+    (filtro === 'tecnico' && (sec.cargo === 'ambos' || sec.cargo === 'tecnico')) ||
+    (filtro === 'analista' && (sec.cargo === 'ambos' || sec.cargo === 'analista'))
+  );
+
+  const cargoBadge = { ambos: '🔵 Ambos', tecnico: '🟠 Técnico (Cód. 14)', analista: '🟢 Analista (Cód. 02)' };
+
+  container.innerHTML = secoesVisiveis.map((sec) => {
+    const si = CHECKLIST_DATA.indexOf(sec);
+    const secDone = sec.topicos.filter((_, ti) => state.checklistState[`${si}-${ti}`]).length;
+    const pctSec = Math.round(secDone / sec.topicos.length * 100);
+    return `
+      <div class="card">
+        <div class="flex-between mb-8" style="flex-wrap:wrap;gap:8px">
+          <div class="section-title" style="margin-bottom:0">${sec.disc}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;padding:3px 8px;border-radius:99px;font-weight:600;background:var(--bg);color:var(--text2)">${cargoBadge[sec.cargo]}</span>
+            <span style="font-size:11px;color:var(--text3)">${secDone}/${sec.topicos.length}</span>
+            <span style="font-family:'Syne';font-size:13px;font-weight:700;color:${getStatusColor(pctSec)}">${pctSec}%</span>
+          </div>
+        </div>
+        <div class="prog-bar sm mb-8"><div class="prog-bar-fill ${getFillClass(pctSec)}" style="width:${pctSec}%"></div></div>
+        ${sec.topicos.map((item, ti) => {
+          const key = `${si}-${ti}`;
+          const checked = !!state.checklistState[key];
+          const txt = getTopicText(item);
+          const pctBase = getTopicPctBase(item);
+          const qBase = getTopicQBase(item);
+          const pctAtual = qBase > 0 ? getPctCombinado('_edital_', txt, pctBase, qBase) : 0;
+          let statusIcon = '';
+          if (qBase === 0) statusIcon = '<span title="Sem questões feitas" style="color:var(--text3);font-size:11px;margin-left:4px">📭 sem questões</span>';
+          else if (pctAtual < 70) statusIcon = `<span style="color:var(--accent);font-weight:700;font-size:11px;margin-left:4px">${pctAtual}% 🔴</span>`;
+          else if (pctAtual <= 85) statusIcon = `<span style="color:var(--warn);font-weight:600;font-size:11px;margin-left:4px">${pctAtual}% 🟡</span>`;
+          else statusIcon = `<span style="color:var(--accent3);font-size:11px;margin-left:4px">${pctAtual}% 🟢</span>`;
+          return `
+            <div class="checklist-item ${checked ? 'checked' : ''}" onclick="toggleChecklist('${key}', this)" style="justify-content:space-between">
+              <div style="display:flex;align-items:flex-start;gap:8px;flex:1">
+                <div class="cl-box" style="flex-shrink:0;margin-top:2px">${checked ? '✓' : ''}</div>
+                <span class="cl-text">${txt}</span>
+              </div>
+              ${statusIcon}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleChecklist(key, el) {
+  state.checklistState[key] = !state.checklistState[key];
+  el.classList.toggle('checked', state.checklistState[key]);
+  el.querySelector('.cl-box').textContent = state.checklistState[key] ? '✓' : '';
+  saveState();
+  let total = 0, done = 0;
+  CHECKLIST_DATA.forEach((sec, si) => {
+    sec.topicos.forEach((_, ti) => { total++; if (state.checklistState[`${si}-${ti}`]) done++; });
+  });
+  const pct = Math.round(done / total * 100);
+  const pctEl = document.getElementById('cl-pct');
+  if (pctEl) pctEl.textContent = pct + '%';
+  const doneEl = document.getElementById('cl-done');
+  if (doneEl) doneEl.textContent = done;
+  const pendEl = document.getElementById('cl-pend');
+  if (pendEl) pendEl.textContent = total - done;
+}
+
+// ============================================================
+// REVISÃO
+// ============================================================
+function renderRevisao() {
+  const listaEl = document.getElementById('revisao-diaria-list');
+  if (listaEl) {
+    if (state.erros.length === 0) {
+      listaEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">Nenhum erro registrado ainda. Adicione abaixo.</div>';
+    } else {
+      listaEl.innerHTML = state.erros.slice(-10).reverse().map((e, i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:18px">❌</span>
+          <span style="flex:1;font-size:13px">${e}</span>
+          <button class="btn btn-secondary btn-sm" onclick="removeErro(${state.erros.length - 1 - i})">✕</button>
+        </div>
+      `).join('');
+    }
+  }
+
+  const semanalEl = document.getElementById('revisao-semanal-list');
+  if (semanalEl) {
+    const weak = getWeakTopics().filter(t => t.q >= 5).slice(0, 20);
+    semanalEl.innerHTML = weak.map((t, i) => `
+      <div class="topic-row">
+        <div class="topic-rank">${i+1}</div>
+        <div class="topic-info">
+          <div class="topic-name">${t.nome}</div>
+          <div class="topic-meta">${t.discNome.split(' ')[0]} · ${t.q} questões resolvidas</div>
+        </div>
+        <div class="topic-pct status-weak">${t.pct}%</div>
+      </div>
+    `).join('');
+  }
+}
+
+function addErro() {
+  const val = document.getElementById('erro-input')?.value.trim();
+  if (!val) return;
+  state.erros.push(val);
+  document.getElementById('erro-input').value = '';
+  saveState();
+  renderRevisao();
+}
+
+function removeErro(idx) {
+  state.erros.splice(idx, 1);
+  saveState();
+  renderRevisao();
+}
+
+// ============================================================
+// SIMULADO
+// ============================================================
+const QUESTOES_BANCO = [
+  // PORTUGUÊS
+  { id: 1, disc: 'portugues', topico: 'Regência Verbal', dificil: true,
+    enunciado: 'Assinale a alternativa em que a regência verbal está CORRETA conforme a norma culta:',
+    opcoes: ['Eu aspiro o cargo de gerente há anos.','Ela obedeceu ao regulamento sem questionar.','O médico assistiu o paciente com dedicação.','Eles visaram somente ao lucro imediato.','Prefiro mais ficar em casa do que sair.'],
+    gabarito: 1, explicacao: '"Obedecer" é verbo transitivo indireto e exige a preposição "a". A alternativa B está correta. "Aspirar" no sentido de almejar exige "a" (aspirar AO cargo). "Assistir" no sentido de atender exige "a". "Visar" no sentido de objetivar exige "a" (visaram AO lucro). "Preferir" não admite "mais".' },
+  { id: 2, disc: 'portugues', topico: 'Concordância Verbal', dificil: true,
+    enunciado: 'Marque a alternativa com concordância verbal CORRETA:',
+    opcoes: ['Faz dez anos que não o via.','Haviam muitas pessoas no evento.','Mais de um candidato desistiram da prova.','Cerca de metade dos alunos faltaram à aula.','Fazem dois meses que ele saiu.'],
+    gabarito: 0, explicacao: '"Fazer" com sentido de tempo decorrido é impessoal (não tem sujeito) — fica no singular: "Faz dez anos". "Haver" no sentido de existir também é impessoal. "Mais de um" leva verbo no singular. Metade com verbo no plural é aceito quando o complemento é plural.' },
+  { id: 3, disc: 'portugues', topico: 'Partícula "Se"',
+    enunciado: 'Em "Vendem-se casas neste bairro", a partícula "se" exerce a função de:',
+    opcoes: ['Pronome reflexivo','Índice de indeterminação do sujeito','Partícula apassivadora','Expletivo / de realce','Conjunção condicional'],
+    gabarito: 2, explicacao: 'Quando "se" aparece com verbo transitivo direto e o sujeito é a coisa vendida (casas), funciona como partícula apassivadora, tornando a oração passiva: "Casas são vendidas neste bairro".' },
+  { id: 4, disc: 'portugues', topico: 'Crase',
+    enunciado: 'Assinale a alternativa em que o uso do acento grave (crase) está CORRETO:',
+    opcoes: ['Refiro-me à ela especificamente.','Ela chegou à duas horas da tarde.','Fui à farmácia buscar o remédio.','Informei o ocorrido à ambos os lados.','O relatório foi enviado à vossa senhoria imediatamente.'],
+    gabarito: 2, explicacao: '"Farmácia" é substantivo feminino que admite artigo "a". O verbo "ir" exige preposição "a". Logo, a+a = "à farmácia". Pronomes pessoais (ela), numerais que não aceitam artigo (duas horas), e a expressão "ambos" não admitem crase antes.' },
+  { id: 5, disc: 'portugues', topico: 'Interpretação de Textos', dificil: false,
+    enunciado: 'Sobre a linguagem formal nos documentos oficiais, é correto afirmar que:',
+    opcoes: ['A linguagem informal é tolerada em comunicados internos','A clareza e a objetividade são dispensáveis em despachos','O uso de jargões técnicos é sempre recomendado para impor autoridade','A impessoalidade e a clareza são princípios fundamentais da redação oficial','Documentos oficiais podem adotar linguagem coloquial para maior proximidade'],
+    gabarito: 3, explicacao: 'A redação oficial deve pautar-se pela impessoalidade, clareza, concisão e uniformidade, conforme o Manual de Redação da Presidência da República.' },
+
+  // DIR. ADMINISTRATIVO
+  { id: 6, disc: 'dadm', topico: 'PPP — Lei 11.079/2004',
+    enunciado: 'Sobre as Parcerias Público-Privadas (PPP), assinale a alternativa CORRETA:',
+    opcoes: ['A PPP dispensa licitação por ser contrato de natureza especial','A concessão patrocinada envolve contraprestação pecuniária pelo parceiro público','O contrato de PPP pode ter prazo inferior a 5 anos','Na PPP administrativa, o poder público não paga nada ao parceiro privado','PPP só pode ser celebrada pela União Federal'],
+    gabarito: 1, explicacao: 'Na concessão patrocinada (art. 2º, §1º, Lei 11.079/2004), além da tarifa cobrada dos usuários, há contraprestação pecuniária do parceiro público. O prazo mínimo é de 5 anos. A concessão administrativa tem contraprestação total ou parcial do poder público.' },
+  { id: 7, disc: 'dadm', topico: 'Bens Públicos',
+    enunciado: 'São bens públicos de uso especial, nos termos do Código Civil:',
+    opcoes: ['Praças, jardins e ruas públicas','Edifícios e terrenos utilizados em serviço ou estabelecimento da administração federal','Terras devolutas ou arrecadadas pelos estados','Lagos e rios em terrenos de domínio público','Todos os demais bens da Administração'],
+    gabarito: 1, explicacao: 'Os bens de uso especial (art. 99, II, CC) são os edifícios ou terrenos destinados a serviço ou estabelecimento da administração federal, estadual, territorial ou municipal. Praças são bens de uso comum do povo. Terras devolutas e bens sem destinação específica são dominicais.' },
+  { id: 8, disc: 'dadm', topico: 'Atos Administrativos — Elementos/Requisitos',
+    enunciado: 'São elementos (requisitos de validade) do ato administrativo, EXCETO:',
+    opcoes: ['Competência','Finalidade','Forma','Eficiência','Motivo'],
+    gabarito: 3, explicacao: 'Os elementos do ato administrativo são: Competência, Finalidade, Forma, Motivo e Objeto (COMFIFOMO ou COMFO). A "Eficiência" é princípio da Administração Pública (art. 37 CF/88), não elemento do ato administrativo.' },
+  { id: 9, disc: 'dadm', topico: 'Licitações — Lei 14.133/2021',
+    enunciado: 'Na Lei nº 14.133/2021, são modalidades de licitação:',
+    opcoes: ['Convite, tomada de preços, concorrência e leilão','Pregão, concorrência, concurso, leilão e diálogo competitivo','Carta convite, concorrência e pregão eletrônico','Concorrência, tomada de preços, pregão e convite','Leilão, concorrência, concurso e carta convite'],
+    gabarito: 1, explicacao: 'A Lei 14.133/2021 prevê 5 modalidades: Pregão, Concorrência, Concurso, Leilão e Diálogo Competitivo (art. 28). Foram extintas as modalidades convite, tomada de preços e carta convite previstas na Lei 8.666/1993.' },
+
+  // DIREITO CONSTITUCIONAL
+  { id: 10, disc: 'dconst', topico: 'Poder Judiciário — STF',
+    enunciado: 'Sobre o Supremo Tribunal Federal, segundo a Constituição Federal de 1988, é CORRETO afirmar:',
+    opcoes: ['É composto por 13 ministros nomeados pelo Presidente após aprovação do Senado','Compete ao STF julgar originariamente o Presidente da República nos crimes de responsabilidade','O STF é composto por 11 ministros vitalícios, nomeados pelo Presidente com aprovação do Senado Federal','O mandato dos ministros do STF é de 10 anos, vedada a recondução','O presidente do STF é eleito pelos membros do Congresso Nacional'],
+    gabarito: 2, explicacao: 'O STF é composto por 11 ministros (art. 101 CF/88), escolhidos entre cidadãos com mais de 35 e menos de 65 anos, de notável saber jurídico e reputação ilibada, nomeados pelo Presidente da República, após aprovação da maioria absoluta do Senado Federal. São vitalícios.' },
+  { id: 11, disc: 'dconst', topico: 'Controle de Constitucionalidade — ADI',
+    enunciado: 'Sobre a Ação Direta de Inconstitucionalidade (ADI), é correto afirmar que:',
+    opcoes: ['Pode ser ajuizada por qualquer cidadão com interesse na causa','A decisão do STF em ADI possui eficácia erga omnes e efeito vinculante','O objeto da ADI pode ser qualquer ato do Poder Executivo federal','A ADI pode ser ajuizada perante qualquer tribunal do país','O prazo para propositura da ADI é de 2 anos da publicação da lei'],
+    gabarito: 1, explicacao: 'A decisão definitiva em ADI tem eficácia contra todos (erga omnes) e efeito vinculante (art. 102, §2º, CF/88). O rol de legitimados é taxativo (art. 103, CF/88). O STF é o único tribunal competente para ADI federal. Não há prazo para propositura.' },
+  { id: 12, disc: 'dconst', topico: 'Medidas Provisórias',
+    enunciado: 'Sobre as Medidas Provisórias, é correto afirmar:',
+    opcoes: ['Têm vigência de 30 dias, prorrogável uma vez por igual período','São editadas pelo Presidente do Senado em caso de urgência','Podem dispor sobre matéria de direito penal, processo penal e processual civil','Têm força de lei desde a publicação, mas só vigoram com aprovação do Congresso em 60 dias','O prazo de vigência é de 60 dias, prorrogável automaticamente por mais 60 dias'],
+    gabarito: 4, explicacao: 'Conforme o art. 62 da CF/88, a MP tem vigência de 60 dias, prorrogável de pleno direito por mais 60 dias. Perderá eficácia se não for convertida em lei pelo Congresso no prazo total de 120 dias.' },
+
+  // AFO
+  { id: 13, disc: 'afo', topico: 'LDO — Lei de Diretrizes Orçamentárias',
+    enunciado: 'A Lei de Diretrizes Orçamentárias (LDO) tem por objetivo, EXCETO:',
+    opcoes: ['Estabelecer metas e prioridades da administração pública','Orientar a elaboração da LOA','Dispor sobre alterações na legislação tributária','Autorizar diretamente despesas públicas específicas','Estabelecer política de aplicação das agências financeiras de fomento'],
+    gabarito: 3, explicacao: 'A LDO não autoriza despesas — isso é função da LOA. A LDO (art. 165, §2º, CF/88) estabelece metas e prioridades, orienta a elaboração da LOA, dispõe sobre alterações na legislação tributária e estabelece política de aplicação das agências financeiras.' },
+  { id: 14, disc: 'afo', topico: 'Créditos Adicionais',
+    enunciado: 'São créditos adicionais SUPLEMENTARES aqueles destinados a:',
+    opcoes: ['Cobrir despesas para as quais não haja dotação orçamentária específica','Reforçar dotação orçamentária já existente e insuficiente','Atender despesas urgentes e imprevistas decorrentes de guerra ou comoção interna','Custear novas despesas não previstas na LOA','Substituir créditos vetados pelo Poder Legislativo'],
+    gabarito: 1, explicacao: 'Os créditos suplementares (art. 41, I, Lei 4.320/64) destinam-se ao reforço de dotação orçamentária já existente, porém insuficiente. Os créditos especiais atendem despesas sem dotação. Os créditos extraordinários atendem despesas urgentes e imprevistas.' },
+  { id: 15, disc: 'afo', topico: 'Classificação da Despesa Orçamentária',
+    enunciado: 'São elementos da classificação da despesa por natureza, EXCETO:',
+    opcoes: ['Categoria econômica','Grupo de natureza de despesa','Modalidade de aplicação','Elemento de despesa','Subfunção'],
+    gabarito: 4, explicacao: 'A classificação por natureza da despesa é composta por: Categoria Econômica, Grupo de Natureza de Despesa, Modalidade de Aplicação e Elemento de Despesa. A "subfunção" integra a classificação funcional-programática, não a classificação por natureza.' },
+
+  // ADM GERAL
+  { id: 16, disc: 'adm', topico: 'BPM, BPMN e CBOK',
+    enunciado: 'Sobre o BPM (Business Process Management), assinale a alternativa CORRETA:',
+    opcoes: ['BPM é exclusivamente uma notação gráfica para processos','O BPMN é o único componente do BPM CBOK','BPM é uma abordagem disciplinada para identificar, desenhar, executar, documentar, medir, monitorar e controlar processos','O BPM se limita à automação de processos de TI','CBOK é um software de mapeamento de processos'],
+    gabarito: 2, explicacao: 'BPM (Business Process Management) é uma disciplina gerencial que integra estratégia, objetivos, cultura, estruturas organizacionais, papéis, políticas, metodologias e tecnologias para analisar, desenhar, implementar, controlar e melhorar os processos. O BPMN é a notação; o CBOK é o guia de referência do BPM.' },
+  { id: 17, disc: 'adm', topico: 'OKR — Objetivos e Resultados-Chave',
+    enunciado: 'Sobre a metodologia OKR (Objectives and Key Results), é correto afirmar:',
+    opcoes: ['OKR é sinônimo de BSC e tem os mesmos componentes','Os objetivos no OKR devem ser quantitativos e mensuráveis','Os key results são metas que medem o progresso em direção aos objetivos','OKR é adequado apenas para startups de tecnologia','Cada objetivo deve ter no máximo 10 key results'],
+    gabarito: 2, explicacao: 'No OKR, os Key Results (resultados-chave) são métricas específicas e mensuráveis que medem o progresso em direção ao objetivo. Os objetivos são qualitativos, inspiradores e direcionais. Cada objetivo tipicamente tem 3 a 5 key results. OKR e BSC são ferramentas distintas.' },
+  { id: 18, disc: 'adm', topico: 'Governança Pública',
+    enunciado: 'No contexto do setor público, governança pode ser entendida como:',
+    opcoes: ['A capacidade do governo de arrecadar tributos e financiar políticas','A força política do governo para implementar suas decisões','Os mecanismos de liderança, estratégia e controle que asseguram que ações produzam resultados pretendidos','A capacidade operacional do governo de realizar obras e serviços','O conjunto de leis e decretos que regulam a Administração Pública'],
+    gabarito: 2, explicacao: 'Segundo o TCU (Referencial Básico de Governança), governança no setor público compreende os mecanismos de liderança, estratégia e controle postos em prática para avaliar, direcionar e monitorar a atuação da gestão, visando à condução de políticas públicas e à prestação de serviços no interesse da sociedade.' },
+
+  // GESTÃO DE PESSOAS
+  { id: 19, disc: 'gp', topico: 'Modelos Básicos de Gestão de Pessoas',
+    enunciado: 'Sobre os modelos de gestão de pessoas, assinale a alternativa CORRETA:',
+    opcoes: ['O modelo de gestão por resultados ignora o desenvolvimento das pessoas','No modelo de gestão por competências, o foco é apenas na contratação de especialistas','O modelo de gestão estratégica de pessoas alinha as práticas de RH com a estratégia organizacional','O modelo burocrático de gestão de pessoas é o mais adotado atualmente por gerar mais eficiência','A gestão por competências e a gestão estratégica de pessoas são conceitos opostos e excludentes'],
+    gabarito: 2, explicacao: 'A gestão estratégica de pessoas pressupõe o alinhamento das políticas, práticas e sistemas de RH com os objetivos estratégicos da organização. As competências individuais e organizacionais são gerenciadas para garantir a execução da estratégia.' },
+  { id: 20, disc: 'gp', topico: 'Treinamento, Desenvolvimento e Educação',
+    enunciado: 'Sobre Treinamento, Desenvolvimento e Educação (TD&E) nas organizações, é CORRETO afirmar:',
+    opcoes: ['O treinamento foca no desenvolvimento de longo prazo visando à carreira profissional','O desenvolvimento organizacional trata exclusivamente do treinamento técnico','O levantamento de necessidades de treinamento (LNT) é a etapa final do ciclo de T&D','O treinamento tem como objetivo suprir lacunas de competências para o cargo atual ou futuro','Educação corporativa e treinamento são termos sinônimos'],
+    gabarito: 3, explicacao: 'O treinamento visa suprir lacunas de competência (conhecimentos, habilidades, atitudes) necessárias ao desempenho atual ou futuro. O LNT é a primeira etapa do ciclo. Desenvolvimento é mais amplo e voltado à carreira. Educação corporativa é um conceito mais abrangente que inclui aprendizado contínuo.' },
+];
+
+let simAtual = [];
+let simRespostas = {};
+let simMostrandoResultado = false;
+
+function setSimTab(tab, el) {
+  state.currentSimTab = tab;
+  document.querySelectorAll('#page-simulado .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (tab === 'resultado') verResultados();
+  else {
+    document.getElementById('sim-config').style.display = '';
+    document.getElementById('sim-area').style.display = 'none';
+    document.getElementById('sim-resultado').style.display = 'none';
+  }
+}
+
+function iniciarSimulado() {
+  const qtd = parseInt(document.getElementById('sim-qtd').value);
+  const disc = document.getElementById('sim-disc').value;
+  const tab = state.currentSimTab;
+
+  let pool = [...QUESTOES_BANCO];
+  if (disc !== 'todos') pool = pool.filter(q => q.disc === disc);
+
+  // Para modo focado, priorizar tópicos fracos
+  if (tab === 'focado') {
+    const weakKeys = getWeakTopics().map(t => t.nome.toLowerCase());
+    pool.sort((a, b) => {
+      const aWeak = weakKeys.some(k => a.topico.toLowerCase().includes(k.split(' ')[0])) ? 0 : 1;
+      const bWeak = weakKeys.some(k => b.topico.toLowerCase().includes(k.split(' ')[0])) ? 0 : 1;
+      return aWeak - bWeak;
+    });
+  }
+
+  // Shuffle and pick
+  pool = pool.sort(() => Math.random() - 0.5).slice(0, Math.min(qtd, pool.length));
+  simAtual = pool;
+  simRespostas = {};
+  simMostrandoResultado = false;
+
+  document.getElementById('sim-config').style.display = 'none';
+  document.getElementById('sim-resultado').style.display = 'none';
+
+  const area = document.getElementById('sim-area');
+  area.style.display = '';
+  area.innerHTML = `
+    <div class="alert alert-blue mb-16">
+      <span class="alert-icon">📝</span>
+      <div>${pool.length} questões selecionadas ${tab === 'focado' ? '— Foco nos seus tópicos mais fracos' : '— Estilo FCC misto'}. Clique nas opções para responder, depois clique em "Finalizar".</div>
+    </div>
+    ${pool.map((q, qi) => `
+      <div class="question-card" id="qcard-${qi}">
+        <div class="question-header">
+          <span class="q-num">Q${qi+1}</span>
+          <div style="flex:1">
+            <div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">
+              ${q.disc.toUpperCase()} · ${q.topico}
+            </div>
+            <div class="q-text">${q.enunciado}</div>
+          </div>
+        </div>
+        <div class="q-options">
+          ${q.opcoes.map((op, oi) => `
+            <div class="q-opt" id="opt-${qi}-${oi}" onclick="selecionarOpt(${qi},${oi})">
+              <span class="q-opt-letter">${'ABCDE'[oi]}</span>
+              <span>${op}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+    <div style="display:flex;gap:12px;margin-top:16px">
+      <button class="btn btn-primary" onclick="finalizarSimulado()">✅ Finalizar Simulado</button>
+      <button class="btn btn-secondary" onclick="cancelarSimulado()">Cancelar</button>
+    </div>
+  `;
+}
+
+function selecionarOpt(qi, oi) {
+  if (simMostrandoResultado) return;
+  simRespostas[qi] = oi;
+  document.querySelectorAll(`[id^="opt-${qi}-"]`).forEach(el => el.classList.remove('selected'));
+  document.getElementById(`opt-${qi}-${oi}`)?.classList.add('selected');
+}
+
+function finalizarSimulado() {
+  simMostrandoResultado = true;
+  let acertos = 0;
+  simAtual.forEach((q, qi) => {
+    const resp = simRespostas[qi];
+    const card = document.getElementById(`qcard-${qi}`);
+    q.opcoes.forEach((_, oi) => {
+      const el = document.getElementById(`opt-${qi}-${oi}`);
+      el?.classList.remove('selected', 'correct', 'wrong');
+      if (oi === q.gabarito) el?.classList.add('correct');
+      else if (oi === resp && resp !== q.gabarito) el?.classList.add('wrong');
+    });
+    if (resp === q.gabarito) acertos++;
+    // Mostrar explicação
+    const expl = document.createElement('div');
+    expl.style.cssText = 'margin-top:12px;padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.6;background:var(--yellow-bg);border:1px solid var(--yellow-border);color:var(--text2)';
+    expl.innerHTML = `<strong>💡 Gabarito: ${['A','B','C','D','E'][q.gabarito]}</strong> — ${q.explicacao}`;
+    card?.appendChild(expl);
+  });
+
+  const pct = Math.round(acertos / simAtual.length * 100);
+  const data = new Date().toLocaleDateString('pt-BR');
+  state.simulados.push({ data, questoes: simAtual.length, acertos, pct });
+  if (state.sessoes === undefined) state.sessoes = [];
+  saveState();
+
+  const resultDiv = document.querySelector('#sim-area > div:last-child');
+  if (resultDiv) {
+    resultDiv.innerHTML = `
+      <div class="card" style="background:${pct >= 90 ? 'var(--green-bg)' : pct >= 70 ? 'var(--yellow-bg)' : 'var(--red-bg)'}">
+        <div style="font-family:'Syne';font-size:28px;font-weight:800;color:${getStatusColor(pct)}">${pct}%</div>
+        <div style="font-size:13px;color:var(--text2)">${acertos}/${simAtual.length} questões corretas</div>
+        ${pct < 95 ? `<div style="font-size:12px;color:var(--accent);margin-top:8px;font-weight:600">⚡ Ainda faltam ${95-pct} pontos para a meta. Revise os erros acima!</div>` : '<div style="font-size:12px;color:var(--accent3);margin-top:8px;font-weight:600">🎉 Excelente! Acima da meta de 95%!</div>'}
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary" onclick="iniciarNovoSim()">Nova Rodada</button>
+          <button class="btn btn-secondary" onclick="cancelarSimulado()">Voltar</button>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function cancelarSimulado() {
+  simAtual = [];
+  document.getElementById('sim-config').style.display = '';
+  document.getElementById('sim-area').style.display = 'none';
+  document.getElementById('sim-resultado').style.display = 'none';
+}
+
+function iniciarNovoSim() {
+  cancelarSimulado();
+}
+
+function verResultados() {
+  document.getElementById('sim-config').style.display = 'none';
+  document.getElementById('sim-area').style.display = 'none';
+  const res = document.getElementById('sim-resultado');
+  res.style.display = '';
+  if (state.simulados.length === 0) {
+    res.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:var(--text3)">Nenhum simulado realizado ainda.</div>';
+    return;
+  }
+  res.innerHTML = `
+    <div class="card">
+      <div class="section-title">📊 Histórico de Simulados</div>
+      <table class="data-table" style="width:100%">
+        <thead><tr><th>#</th><th>Data</th><th>Questões</th><th>Acertos</th><th>%</th><th>Status</th></tr></thead>
+        <tbody>
+          ${state.simulados.slice().reverse().map((s, i) => `
+            <tr>
+              <td style="color:var(--text3)">${state.simulados.length - i}</td>
+              <td>${s.data}</td>
+              <td>${s.questoes}</td>
+              <td>${s.acertos}</td>
+              <td><span style="font-family:'Syne';font-weight:700;color:${getStatusColor(s.pct)}">${s.pct}%</span></td>
+              <td><span class="badge ${getStatusClass(s.pct)}">${getStatusLabel(s.pct)}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ============================================================
+// PROGRESSO
+// ============================================================
+function renderProgresso() {
+  const sessoes = state.simulados.length;
+  const questoes = state.simulados.reduce((s, r) => s + r.questoes, 0);
+  const ultimo = state.simulados[state.simulados.length - 1];
+  const media = calcMediaGeral();
+
+  document.getElementById('prog-sessoes').textContent = sessoes;
+  document.getElementById('prog-questoes').textContent = questoes;
+  document.getElementById('prog-hoje').textContent = ultimo ? ultimo.pct + '%' : '—%';
+  document.getElementById('prog-gap').textContent = media < 95 ? (95 - media) + '%' : '0%';
+
+  const hist = document.getElementById('historico-simulados');
+  if (!hist) return;
+  if (state.simulados.length === 0) {
+    hist.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">Realize simulados para acompanhar sua evolução.</div>';
+    return;
+  }
+  hist.innerHTML = `
+    <div class="gap-16">
+      ${state.simulados.slice().reverse().slice(0,10).map((s, i) => `
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:11px;color:var(--text3);width:70px;flex-shrink:0">${s.data}</div>
+          <div style="flex:1">
+            <div class="prog-bar lg"><div class="prog-bar-fill ${getFillClass(s.pct)}" style="width:${s.pct}%"></div></div>
+          </div>
+          <div style="font-family:'Syne';font-weight:700;color:${getStatusColor(s.pct)};width:44px;text-align:right">${s.pct}%</div>
+          <div style="font-size:11px;color:var(--text3);width:80px">${s.acertos}/${s.questoes} acertos</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ============================================================
+// ATUALIZAR DADOS — sistema dinâmico com média ponderada
+// ============================================================
+
+function atualizarTopicosDisp() {
+  const disc = document.getElementById('upd-disc').value;
+  const sel = document.getElementById('upd-topic-sel');
+  if (!sel) return;
+  if (!disc) { sel.innerHTML = '<option value="">— Selecione a disciplina primeiro —</option>'; return; }
+
+  const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
+  if (!discObj) return;
+
+  sel.innerHTML = '<option value="">— Selecione o tópico —</option>' +
+    discObj.topicos.map(t => {
+      const pctAtual = getPctCombinado(disc, t.nome, t.pct, t.q);
+      const status = pctAtual < 70 ? '🔴' : pctAtual <= 85 ? '🟡' : '🟢';
+      return `<option value="${t.nome}">${status} ${t.nome} (${pctAtual}%)</option>`;
+    }).join('');
+}
+
+function syncTopicoInput() {
+  const sel = document.getElementById('upd-topic-sel');
+  const inp = document.getElementById('upd-topic');
+  if (sel && inp && sel.value) inp.value = sel.value;
+  calcPct();
+}
+
+function calcAcertos() {
+  const qtd = parseInt(document.getElementById('upd-qtd')?.value || 0);
+  const acEl = document.getElementById('upd-acertos');
+  // só recalcula o preview sem forçar o campo
+  calcPct();
+}
+
+function calcPct() {
+  const disc = document.getElementById('upd-disc')?.value;
+  const topicoNome = document.getElementById('upd-topic')?.value?.trim();
+  const qtd = parseInt(document.getElementById('upd-qtd')?.value || 0);
+  const acertos = parseInt(document.getElementById('upd-acertos')?.value || 0);
+
+  const preview = document.getElementById('upd-preview');
+  if (!preview) return;
+
+  if (!disc || !topicoNome || isNaN(qtd) || qtd <= 0 || isNaN(acertos)) {
+    preview.style.display = 'none';
+    return;
+  }
+
+  const pctSessao = Math.round(acertos / qtd * 100);
+
+  // Encontrar base do tópico
+  const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
+  const topicoObj = discObj?.topicos.find(t => t.nome.toLowerCase() === topicoNome.toLowerCase());
+  const pctBase = topicoObj?.pct ?? 0;
+  const qBase = topicoObj?.q ?? 0;
+
+  // Calcular novo combinado
+  const pctAtualAntes = getPctCombinado(disc, topicoNome, pctBase, qBase);
+  const acBase = Math.round((qBase + (state.sessoes||[]).filter(s=>s.disc===disc&&s.topico.toLowerCase()===topicoNome.toLowerCase()).reduce((a,s)=>a+s.qtd,0)) * pctAtualAntes / 100);
+  const qAntes = qBase + (state.sessoes||[]).filter(s=>s.disc===disc&&s.topico.toLowerCase()===topicoNome.toLowerCase()).reduce((a,s)=>a+s.qtd,0);
+  const novoTotal = qAntes + qtd;
+  const novoAcertos = acBase + acertos;
+  const novoNovo = Math.round(novoAcertos / novoTotal * 100);
+
+  const delta = novoNovo - pctAtualAntes;
+  const deltaStr = delta >= 0
+    ? `<span style="color:var(--accent3)">▲ +${delta}%</span>`
+    : `<span style="color:var(--accent)">▼ ${delta}%</span>`;
+
+  preview.style.display = '';
+  document.getElementById('prev-sessao').textContent = pctSessao + '%';
+  document.getElementById('prev-sessao').style.color = getStatusColor(pctSessao);
+  document.getElementById('prev-novo').textContent = novoNovo + '%';
+  document.getElementById('prev-novo').style.color = getStatusColor(novoNovo);
+  document.getElementById('prev-delta').innerHTML = deltaStr;
+  const bar = document.getElementById('prev-bar');
+  if (bar) { bar.style.width = novoNovo + '%'; bar.className = 'prog-bar-fill ' + getFillClass(novoNovo); }
+}
+
+function registrarSessao() {
+  const disc = document.getElementById('upd-disc')?.value;
+  const topicoNome = document.getElementById('upd-topic')?.value?.trim();
+  const qtd = parseInt(document.getElementById('upd-qtd')?.value);
+  const acertos = parseInt(document.getElementById('upd-acertos')?.value);
+
+  if (!disc || !topicoNome || isNaN(qtd) || qtd <= 0 || isNaN(acertos) || acertos < 0) {
+    const fb = document.getElementById('upd-feedback');
+    if (fb) { fb.style.display=''; fb.className='alert alert-red'; fb.innerHTML='<span>⚠️</span><div>Preencha todos os campos corretamente.</div>'; setTimeout(()=>fb.style.display='none',3000); }
+    return;
+  }
+  if (acertos > qtd) {
+    const fb = document.getElementById('upd-feedback');
+    if (fb) { fb.style.display=''; fb.className='alert alert-red'; fb.innerHTML='<span>⚠️</span><div>Acertos não pode ser maior que questões resolvidas.</div>'; setTimeout(()=>fb.style.display='none',3000); }
+    return;
+  }
+
+  if (!state.sessoes) state.sessoes = [];
+  const pct = Math.round(acertos / qtd * 100);
+  state.sessoes.push({ disc, topico: topicoNome, qtd, acertos, pct, data: new Date().toLocaleDateString('pt-BR') });
+  saveState();
+
+  // Limpar campos
+  document.getElementById('upd-qtd').value = '';
+  document.getElementById('upd-acertos').value = '';
+  document.getElementById('upd-preview').style.display = 'none';
+
+  // Feedback
+  const fb = document.getElementById('upd-feedback');
+  if (fb) {
+    fb.style.display = '';
+    fb.className = 'alert alert-green';
+    fb.innerHTML = `<span>✅</span><div><strong>Registrado!</strong> ${topicoNome} — ${pct}% nesta sessão. Percentual geral atualizado em todo o sistema.</div>`;
+    setTimeout(() => fb.style.display = 'none', 4000);
+  }
+
+  renderAtualizar();
+  renderTabelaTopicos();
+  atualizarTopicosDisp();
+
+  // Mostrar celebração se percentual subiu
+  const novoNovoPct = getPctCombinado('_edital_', topicoNome, (() => {
+    const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
+    const tObj = discObj?.topicos.find(t => t.nome.toLowerCase() === topicoNome.toLowerCase());
+    return tObj?.pct ?? 0;
+  })(), (() => {
+    const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
+    const tObj = discObj?.topicos.find(t => t.nome.toLowerCase() === topicoNome.toLowerCase());
+    return tObj?.q ?? 0;
+  })());
+  const pctAntes = (() => {
+    const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
+    const tObj = discObj?.topicos.find(t => t.nome.toLowerCase() === topicoNome.toLowerCase());
+    const pBase = tObj?.pct ?? 0;
+    const qBase = tObj?.q ?? 0;
+    // Percentual antes desta sessão (sem a última que acabou de ser adicionada)
+    const sessoesSemUltima = state.sessoes.slice(0, -1).filter(s =>
+      s.disc === disc && s.topico.toLowerCase() === topicoNome.toLowerCase()
+    );
+    if (sessoesSemUltima.length === 0) return pBase;
+    const tq = sessoesSemUltima.reduce((a,s)=>a+s.qtd,0);
+    const ta = sessoesSemUltima.reduce((a,s)=>a+s.acertos,0);
+    const acBase = Math.round(qBase * pBase / 100);
+    return Math.round((acBase + ta) / (qBase + tq) * 100);
+  })();
+
+  const delta = novoNovoPct - pctAntes;
+  if (delta > 0) {
+    setTimeout(() => {
+      const mediaAtual = calcMediaGeralAtual();
+      if (mediaAtual >= 95) {
+        showCelebration('meta_95', { media: mediaAtual });
+      } else {
+        showCelebration('aumento', { topico: topicoNome, antigo: pctAntes, novo: novoNovoPct, delta });
+      }
+    }, 400);
+  }
+}
+
+function renderAtualizar() {
+  // Maiores evoluções
+  const evolEl = document.getElementById('maiores-evolucoes');
+  if (evolEl && state.sessoes && state.sessoes.length > 0) {
+    // Agrupa por disc+topico e calcula delta
+    const map = {};
+    for (const s of state.sessoes) {
+      const key = s.disc + '||' + s.topico.toLowerCase();
+      if (!map[key]) map[key] = { disc: s.disc, topico: s.topico, qtd: 0, acertos: 0 };
+      map[key].qtd += s.qtd;
+      map[key].acertos += s.acertos;
+    }
+    const evols = Object.values(map).map(m => {
+      const discObj = DISCIPLINAS_MPAL.find(d => d.key === m.disc);
+      const tObj = discObj?.topicos.find(t => t.nome.toLowerCase() === m.topico.toLowerCase());
+      const pctBase = tObj?.pct ?? 0;
+      const qBase = tObj?.q ?? 0;
+      const pctNovo = getPctCombinado(m.disc, m.topico, pctBase, qBase);
+      return { ...m, pctBase, pctNovo, delta: pctNovo - pctBase };
+    }).filter(e => e.delta !== 0).sort((a,b) => b.delta - a.delta).slice(0,5);
+
+    if (evols.length === 0) {
+      evolEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Registre sessões para ver sua evolução.</div>';
+    } else {
+      evolEl.innerHTML = evols.map(e => `
+        <div class="topic-row">
+          <div class="topic-info">
+            <div class="topic-name" style="font-size:12px">${e.topico}</div>
+            <div class="topic-meta">${e.pctBase}% → <strong style="color:${getStatusColor(e.pctNovo)}">${e.pctNovo}%</strong></div>
+          </div>
+          <div style="font-family:'Syne';font-weight:800;color:var(--accent3);font-size:16px">+${e.delta}%</div>
+        </div>
+      `).join('');
+    }
+  } else if (evolEl) {
+    evolEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Nenhuma sessão registrada ainda.</div>';
+  }
+
+  // Histórico de sessões
+  const list = document.getElementById('sessoes-list');
+  if (!list) return;
+  if (!state.sessoes || state.sessoes.length === 0) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Nenhuma sessão registrada ainda.</div>';
+    return;
+  }
+  list.innerHTML = state.sessoes.slice().reverse().slice(0, 20).map(s => `
+    <div class="topic-row">
+      <div class="topic-info">
+        <div class="topic-name" style="font-size:12px">${s.topico}</div>
+        <div class="topic-meta">${s.data} · ${s.qtd} questões · ${s.acertos} acertos</div>
+      </div>
+      <div class="topic-pct" style="color:${getStatusColor(s.pct)}">${s.pct}%</div>
+    </div>
+  `).join('');
+}
+
+function renderTabelaTopicos() {
+  const container = document.getElementById('tabela-topicos-container');
+  if (!container) return;
+  const filtro = document.getElementById('filter-disc-tabela')?.value || 'todos';
+
+  let topics = getAllTopicsAtual();
+  if (filtro !== 'todos') topics = topics.filter(t => t.disc === filtro);
+  topics.sort((a, b) => a.pctAtual - b.pctAtual);
+
+  container.innerHTML = `
+    <table class="data-table" style="width:100%">
+      <thead><tr>
+        <th>Tópico</th>
+        <th>Disciplina</th>
+        <th>% Original</th>
+        <th>% Atual</th>
+        <th>Evolução</th>
+        <th>Questões Base</th>
+        <th>Status</th>
+      </tr></thead>
+      <tbody>
+        ${topics.map(t => {
+          const delta = t.pctAtual - t.pctBase;
+          const deltaStr = delta > 0
+            ? `<span style="color:var(--accent3);font-weight:700">▲ +${delta}%</span>`
+            : delta < 0
+            ? `<span style="color:var(--accent);font-weight:700">▼ ${delta}%</span>`
+            : `<span style="color:var(--text3)">—</span>`;
+          return `
+            <tr>
+              <td style="font-size:12px;font-weight:500">${t.nome}</td>
+              <td style="font-size:11px;color:var(--text2)">${t.discNome.split(' ')[0]}</td>
+              <td style="font-size:12px;color:var(--text3)">${t.pctBase}%</td>
+              <td>
+                <span style="font-family:'Syne';font-weight:700;color:${getStatusColor(t.pctAtual)};font-size:14px">${t.pctAtual}%</span>
+              </td>
+              <td>${deltaStr}</td>
+              <td style="font-size:11px;color:var(--text3);text-align:right">${t.q}</td>
+              <td><span class="badge ${getStatusClass(t.pctAtual)}">${getStatusLabel(t.pctAtual)}</span></td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ============================================================
+// CELEBRAÇÃO — mensagens de incentivo ao bater metas
+// ============================================================
+const CELEBRATIONS_AUMENTO = [
+  { emoji: '🚀', title: 'Subiu!', msgs: [
+    'Você aumentou seu percentual! Cada questão correta é um passo rumo aos 95%.',
+    'Evolução real! O sistema já atualizou sua prioridade nesse tópico.',
+    'Isso! Consistência é o segredo da aprovação. Continue assim.',
+  ]},
+  { emoji: '📈', title: 'Progresso registrado!', msgs: [
+    'Seu esforço está se convertendo em resultado. A banca FCC cobra exatamente isso.',
+    'O sistema já recalculou seu cronograma. Você está no caminho certo.',
+    'Mais um tópico em ascensão. A aprovação se constrói assim, questão por questão.',
+  ]},
+  { emoji: '💡', title: 'Conhecimento consolidado!', msgs: [
+    'Você está dominando esse conteúdo. Siga para o próximo tópico crítico.',
+    'Ótimo desempenho! Continue revisando para manter acima de 90%.',
+    'Excelente! Esse tópico está saindo da zona de risco.',
+  ]},
+];
+const CELEBRATIONS_META_DIA = [
+  { emoji: '🏆', title: 'Meta do dia batida!', msgs: [
+    'Você concluiu todos os blocos do dia. Descanse bem — o cérebro consolida aprendizado no sono.',
+    'Dia completo! Amanhã o sistema gera um novo plano com os próximos desafios.',
+    'Disciplina diária é o que separa os aprovados dos que ficam tentando. Você está no caminho.',
+  ]},
+  { emoji: '⭐', title: 'Dia 100% concluído!', msgs: [
+    'Todos os tópicos de hoje foram estudados. Você está construindo a aprovação tijolo por tijolo.',
+    'Missão do dia cumprida! Cada dia assim te aproxima dos 95% e da aprovação no MPAL.',
+    'Incrível! Consistência é a chave — e você está sendo consistente.',
+  ]},
+];
+const CELEBRATIONS_95 = [
+  { emoji: '🎯', title: 'META DE 95% ATINGIDA!', msgs: [
+    'VOCÊ CHEGOU LÁ! Média geral acima de 95%. Agora é manutenção e simulados.',
+    'APROVAÇÃO ENCAMINHADA! Sua média já está acima da meta. Continue para manter.',
+    'EXCELÊNCIA! Você atingiu o patamar dos candidatos de altíssima performance.',
+  ]},
+];
+
+function showCelebration(type, extra) {
+  const pool = type === 'meta_dia' ? CELEBRATIONS_META_DIA
+             : type === 'meta_95'  ? CELEBRATIONS_95
+             : CELEBRATIONS_AUMENTO;
+  const cel = pool[Math.floor(Math.random() * pool.length)];
+  const msg = cel.msgs[Math.floor(Math.random() * cel.msgs.length)];
+
+  document.getElementById('cel-emoji').textContent = cel.emoji;
+  document.getElementById('cel-title').textContent = cel.title;
+  document.getElementById('cel-sub').textContent = msg;
+
+  const statEl = document.getElementById('cel-stat-text');
+  if (extra && extra.delta) {
+    statEl.textContent = `${extra.topico || ''} ${extra.antigo}% → ${extra.novo}% (${extra.delta >= 0 ? '+' : ''}${extra.delta}%)`;
+  } else if (extra && extra.media) {
+    statEl.textContent = `Média geral: ${extra.media}% 🎯`;
+  } else {
+    statEl.textContent = '✅ Todos os itens do dia concluídos!';
+  }
+
+  // Confetti
+  spawnConfetti();
+  document.getElementById('celebration-overlay').classList.add('show');
+}
+
+function closeCelebration() {
+  document.getElementById('celebration-overlay').classList.remove('show');
+}
+
+function spawnConfetti() {
+  const card = document.getElementById('celebration-card');
+  const colors = ['#c94f2f','#2f6ec9','#2ca05a','#e8931a','#9b59b6','#e74c3c'];
+  // Remove old pieces
+  card.querySelectorAll('.confetti-piece').forEach(e => e.remove());
+  for (let i = 0; i < 24; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.cssText = `
+      background:${colors[i % colors.length]};
+      left:${Math.random()*100}%;
+      top:${Math.random()*60}%;
+      --tx:${(Math.random()-0.5)*180}px;
+      --ty:${-(40 + Math.random()*120)}px;
+      --tr:${(Math.random()-0.5)*720}deg;
+      animation-delay:${Math.random()*0.4}s;
+      animation-duration:${0.8 + Math.random()*0.6}s;
+    `;
+    card.appendChild(piece);
+  }
+}
+
+// Verificar se meta do dia foi atingida
+function checkMetaDia(key) {
+  // Verifica se todos os itens de hoje estão concluídos
+  const hojeStr = new Date().toISOString().slice(0,10);
+  const hojeKeys = Object.keys(state.planoDone).filter(k => k.startsWith(hojeStr));
+  if (hojeKeys.length > 0 && hojeKeys.every(k => state.planoDone[k])) {
+    const media = calcMediaGeralAtual();
+    if (media >= 95) {
+      showCelebration('meta_95', { media });
+    } else {
+      showCelebration('meta_dia');
+    }
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  await loadState();
+  updateCountdown();
+  setInterval(updateCountdown, 60000);
+  renderDashboard();
+}
+
+// init() é chamado pelo Firebase após os SDKs carregarem (ver topo do script)
+</script>
+</body>
+</html>
