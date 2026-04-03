@@ -579,13 +579,6 @@
     .nav-item .icon { width: auto; }
   }
 </style>
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#c94f2f">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MPAL Coach">
-<link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
 
@@ -1165,11 +1158,6 @@
 </div><!-- /shell -->
 
 <script>
-// Registra Service Worker (PWA)
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(function(){});
-}
-
 // ============================================================
 // FIREBASE — Auth + Realtime Database
 // ============================================================
@@ -1751,12 +1739,12 @@ function getPctCombinado(discKey, topicoNome, pctBase, qBase) {
     s.topico.toLowerCase().trim() === topicoNome.toLowerCase().trim()
   );
   if (matches.length === 0) return pctBase;
-  const totalQ = matches.reduce((a, s) => a + s.qtd, 0);
-  const totalAc = matches.reduce((a, s) => a + s.acertos, 0);
-  // Média ponderada: base + novos
-  const acBase = Math.round(qBase * pctBase / 100);
-  const novoTotal = qBase + totalQ;
-  return Math.round((acBase + totalAc) / novoTotal * 100);
+  // Usa SOMENTE as sessões registradas pelo usuário.
+  // A base (pctBase/qBase) serve só de referência visual — não entra no cálculo.
+  // Assim cada questão que você resolve move o ponteiro de verdade.
+  const totalQ   = matches.reduce((a, s) => a + s.qtd, 0);
+  const totalAc  = matches.reduce((a, s) => a + s.acertos, 0);
+  return Math.round(totalAc / totalQ * 100);
 }
 
 // getAllTopics com percentuais atualizados
@@ -1782,6 +1770,13 @@ function getPriorityAtual(topic) {
   return topic.pctAtual - (incScore * 5);
 }
 function calcMediaGeralAtual() {
+  // Se tem sessões registradas, calcula a média real baseada nas sessões
+  if (state.sessoes && state.sessoes.length > 0) {
+    const total   = state.sessoes.reduce((s, e) => s + e.qtd, 0);
+    const acertos = state.sessoes.reduce((s, e) => s + e.acertos, 0);
+    if (total > 0) return Math.round(acertos / total * 100);
+  }
+  // Fallback: média da base
   const all = getAllTopicsAtual().filter(t => t.q > 3);
   const total = all.reduce((s, t) => s + t.q, 0);
   const acertos = all.reduce((s, t) => s + Math.round(t.q * t.pctAtual / 100), 0);
@@ -2989,12 +2984,17 @@ function calcPct() {
   const pctBase = topicoObj?.pct ?? 0;
   const qBase = topicoObj?.q ?? 0;
 
-  // Calcular novo combinado
-  const pctAtualAntes = getPctCombinado(disc, topicoNome, pctBase, qBase);
-  const acBase = Math.round((qBase + (state.sessoes||[]).filter(s=>s.disc===disc&&s.topico.toLowerCase()===topicoNome.toLowerCase()).reduce((a,s)=>a+s.qtd,0)) * pctAtualAntes / 100);
-  const qAntes = qBase + (state.sessoes||[]).filter(s=>s.disc===disc&&s.topico.toLowerCase()===topicoNome.toLowerCase()).reduce((a,s)=>a+s.qtd,0);
-  const novoTotal = qAntes + qtd;
-  const novoAcertos = acBase + acertos;
+  // Prévia: simula o % combinado SÓ das sessões + esta nova
+  const sessoesDoTopico = (state.sessoes||[]).filter(s =>
+    s.disc === disc && s.topico.toLowerCase() === topicoNome.toLowerCase()
+  );
+  const qSessoes   = sessoesDoTopico.reduce((a,s) => a + s.qtd, 0);
+  const acSessoes  = sessoesDoTopico.reduce((a,s) => a + s.acertos, 0);
+  const pctAtualAntes = qSessoes > 0
+    ? Math.round(acSessoes / qSessoes * 100)
+    : pctBase;
+  const novoTotal   = qSessoes + qtd;
+  const novoAcertos = acSessoes + acertos;
   const novoNovo = Math.round(novoAcertos / novoTotal * 100);
 
   const delta = novoNovo - pctAtualAntes;
@@ -3051,6 +3051,7 @@ function registrarSessao() {
   renderAtualizar();
   renderTabelaTopicos();
   atualizarTopicosDisp();
+  renderDashboard(); // atualiza Top 10 e ranking imediatamente
 
   // Mostrar celebração se percentual subiu
   const novoNovoPct = getPctCombinado('_edital_', topicoNome, (() => {
@@ -3136,15 +3137,33 @@ function renderAtualizar() {
     list.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Nenhuma sessão registrada ainda.</div>';
     return;
   }
-  list.innerHTML = state.sessoes.slice().reverse().slice(0, 20).map(s => `
+  list.innerHTML = state.sessoes.slice().reverse().slice(0, 20).map((s, idx) => {
+    const realIdx = state.sessoes.length - 1 - idx;
+    return `
     <div class="topic-row">
       <div class="topic-info">
         <div class="topic-name" style="font-size:12px">${s.topico}</div>
-        <div class="topic-meta">${s.data} · ${s.qtd} questões · ${s.acertos} acertos</div>
+        <div class="topic-meta">${s.data} · ${s.qtd} questões · ${s.acertos} acertos · <span style="color:var(--text2)">${s.disc}</span></div>
       </div>
-      <div class="topic-pct" style="color:${getStatusColor(s.pct)}">${s.pct}%</div>
-    </div>
-  `).join('');
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="topic-pct" style="color:${getStatusColor(s.pct)}">${s.pct}%</div>
+        <button onclick="deletarSessao(${realIdx})" title="Remover esta sessão"
+          style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:4px;border-radius:4px"
+          onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deletarSessao(idx) {
+  if (!state.sessoes || idx < 0 || idx >= state.sessoes.length) return;
+  const s = state.sessoes[idx];
+  if (!confirm(`Remover sessão de "${s.topico}" (${s.data} · ${s.qtd} questões · ${s.pct}%)?`)) return;
+  state.sessoes.splice(idx, 1);
+  saveState();
+  renderAtualizar();
+  renderTabelaTopicos();
+  renderDashboard();
 }
 
 function renderTabelaTopicos() {
