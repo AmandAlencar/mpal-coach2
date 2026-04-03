@@ -1964,15 +1964,37 @@ function buildCronograma() {
         });
       }
 
-      // Bloco 4 — Mini-simulado (10:50–11:00)
+      // Bloco 4 — Português fixo diário (10:50–11:30) — sempre presente, rotaciona tópicos
+      const ptTopicos = [
+        { nome: 'Concordância (Verbal e Nominal)',        inc: 'alta',  dica: '20 questões · sujeito posposto, expressões partitivas, verbos impessoais' },
+        { nome: 'Regência Nominal e Verbal',              inc: 'alta',  dica: '15 questões · verbos: aspirar, assistir, visar, obedecer, preferir' },
+        { nome: 'Crase',                                  inc: 'alta',  dica: '15 questões · locuções adverbiais, pronomes demonstrativos, aquela/aquilo' },
+        { nome: 'Partícula "Se"',                         inc: 'alta',  dica: '15 questões · índice de indeterminação vs partícula apassivadora' },
+        { nome: 'Colocação Pronominal',                   inc: 'média', dica: '15 questões · próclise, mesóclise, ênclise — gatilhos de cada posição' },
+        { nome: 'Vozes (Passiva e Ativa)',                inc: 'alta',  dica: '15 questões · transformação de voz + identificação em texto' },
+        { nome: 'Sintaxe (geral)',                        inc: 'alta',  dica: '15 questões · termos da oração, período composto, análise sintática' },
+        { nome: 'Pronomes Relativos',                     inc: 'média', dica: '15 questões · cujo/cuja, onde, quem, o qual — regência do antecedente' },
+        { nome: 'Reescrita e Substituição',               inc: 'alta',  dica: '15 questões · substituição sem alterar sentido — item frequente na FCC' },
+        { nome: 'Interpretação de Textos',                inc: 'alta',  dica: '10 questões · textos longos estilo FCC · inferências x dados explícitos' },
+      ];
+      const ptIdx = dias.filter(d => !d.isWeekend).length % ptTopicos.length;
+      const ptHoje = ptTopicos[ptIdx];
+      blocos.push({
+        tipo: 'portugues', hora: '10:50 – 11:30',
+        nome: '📝 Português — Bloco Fixo Diário',
+        itens: [{ nome: ptHoje.nome, pct: null,
+          detalhe: `Incidência FCC: ${ptHoje.inc} · ${ptHoje.dica}` }]
+      });
+
+      // Bloco 5 — Fechamento (11:30)
       const tudo = [...lote60, ...lote40];
       blocos.push(tudo.length > 0
-        ? { tipo: 'simulado', hora: '10:50 – 11:00', nome: '📝 Fechamento — Anotação de Erros',
-            itens: [{ nome: `Registrar erros dos ${tudo.length} tópicos do dia`, detalhe: 'Anote no caderno de erros · registre as sessões na plataforma · revise amanhã' }] }
-        : { tipo: 'simulado', hora: '07:00 – 11:00', nome: '📝 Todos os Tópicos Cobertos — Simulado!',
+        ? { tipo: 'simulado', hora: '11:30', nome: '📝 Fechamento — Anotação de Erros',
+            itens: [{ nome: `Registrar erros dos tópicos do dia`, detalhe: 'Anote no caderno de erros · registre as sessões na plataforma · revise amanhã' }] }
+        : { tipo: 'simulado', hora: '07:00 – 11:30', nome: '📝 Todos os Tópicos Cobertos — Simulado!',
             itens: [{ nome: 'Simulado completo de fixação', detalhe: 'Parabéns! Todos os tópicos foram cobertos. Foco total em simulados e revisão.' }] });
 
-      dias.push({ isoStr, dateStr, isHoje, isWeekend: false, blocos, topicosCount: lote60.length + lote40.length });
+      dias.push({ isoStr, dateStr, isHoje, isWeekend: false, blocos, topicosCount: lote60.length + lote40.length + 1 });
     }
     cur.setDate(cur.getDate() + 1);
   }
