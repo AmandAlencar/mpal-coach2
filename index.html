@@ -1417,12 +1417,7 @@ let state = {
 };
 
 // ── SYNC STATUS ──────────────────────────────────────────────
-// ID único deste dispositivo — nunca vai para o Firebase, fica só local
-var _deviceId = localStorage.getItem('_mpal_device_id');
-if (!_deviceId) {
-  _deviceId = 'dev_' + Math.random().toString(36).slice(2) + Date.now();
-  localStorage.setItem('_mpal_device_id', _deviceId);
-}
+let _syncPaused = false; // evita loop ao receber atualização remota
 
 function showSyncStatus(msg, color) {
   let el = document.getElementById('sync-status');
@@ -1439,33 +1434,29 @@ async function loadState() {
   try {
     const snapshot = await db.ref('mpal_state').get();
     if (snapshot.exists()) {
-      const remote = snapshot.val();
-      // Remove campo de controle interno antes de aplicar ao state
-      delete remote._savedBy;
-      state = { ...state, ...remote };
+      state = { ...state, ...snapshot.val() };
+      // Migra dados antigos do localStorage para Firebase (executa só uma vez)
       localStorage.removeItem('mpal_state');
     } else {
-      // Primeira vez: migra localStorage para Firebase
+      // Primeira vez: tenta migrar localStorage para Firebase
       const saved = localStorage.getItem('mpal_state');
       if (saved) {
         state = { ...state, ...JSON.parse(saved) };
-        await db.ref('mpal_state').set({ ...state, _savedBy: _deviceId });
+        await db.ref('mpal_state').set(state);
         localStorage.removeItem('mpal_state');
       }
     }
-    // Listener em tempo real — só aplica se a mudança veio de OUTRO dispositivo
+    // Listener em tempo real: atualiza automaticamente em outros dispositivos
     db.ref('mpal_state').on('value', (snap) => {
-      if (!snap.exists()) return;
+      if (_syncPaused || !snap.exists()) return;
       const remote = snap.val();
-      // Se foi este dispositivo que salvou, ignora (estado local já está correto)
-      if (remote._savedBy === _deviceId) return;
-      // Veio de outro dispositivo: sincroniza e re-renderiza
-      const { _savedBy, ...remoteClean } = remote;
-      state = { ...state, ...remoteClean };
+      state = { ...state, ...remote };
+      // Re-renderiza a página atual silenciosamente
       try { renderCurrentPage(); } catch(e) {}
-      showSyncStatus('✓ Sincronizado de outro dispositivo', '#edf7f1');
+      showSyncStatus('✓ Sincronizado', '#edf7f1');
     });
   } catch(e) {
+    // Fallback: usa localStorage se Firebase falhar (sem internet)
     try {
       const saved = localStorage.getItem('mpal_state');
       if (saved) state = { ...state, ...JSON.parse(saved) };
@@ -1476,12 +1467,17 @@ async function loadState() {
 
 function saveState() {
   try {
-    // Backup local imediato
+    // Salva localmente como backup offline
     localStorage.setItem('mpal_state', JSON.stringify(state));
-    // Salva no Firebase marcando o deviceId para o listener não re-processar
-    db.ref('mpal_state').set({ ...state, _savedBy: _deviceId })
-      .then(() => showSyncStatus('✓ Salvo na nuvem', '#edf7f1'))
-      .catch(() => showSyncStatus('⚠ Offline — salvo localmente', '#fef9ec'));
+    // Salva na nuvem (pausa listener para não criar loop)
+    _syncPaused = true;
+    db.ref('mpal_state').set(state).then(() => {
+      _syncPaused = false;
+      showSyncStatus('✓ Salvo na nuvem', '#edf7f1');
+    }).catch(() => {
+      _syncPaused = false;
+      showSyncStatus('⚠ Offline — salvo localmente', '#fef9ec');
+    });
   } catch(e) {}
 }
 
@@ -2944,18 +2940,25 @@ function atualizarTopicosDisp() {
   const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
   if (!discObj) return;
 
+  // Usa ÍNDICE como value — evita que aspas nos nomes quebrem o HTML
   sel.innerHTML = '<option value="">— Selecione o tópico —</option>' +
-    discObj.topicos.map(t => {
+    discObj.topicos.map((t, idx) => {
       const pctAtual = getPctCombinado(disc, t.nome, t.pct, t.q);
       const status = pctAtual < 70 ? '🔴' : pctAtual <= 85 ? '🟡' : '🟢';
-      return `<option value="${t.nome}">${status} ${t.nome} (${pctAtual}%)</option>`;
+      return `<option value="${idx}">${status} ${t.nome} (${pctAtual}%)</option>`;
     }).join('');
 }
 
 function syncTopicoInput() {
+  const disc = document.getElementById('upd-disc')?.value;
   const sel = document.getElementById('upd-topic-sel');
   const inp = document.getElementById('upd-topic');
-  if (sel && inp && sel.value) inp.value = sel.value;
+  if (sel && inp && sel.value !== '') {
+    // Busca nome real pelo índice — preserva aspas e caracteres especiais
+    const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
+    const idx = parseInt(sel.value);
+    if (discObj && !isNaN(idx)) inp.value = discObj.topicos[idx]?.nome || '';
+  }
   calcPct();
 }
 
