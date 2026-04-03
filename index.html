@@ -1810,63 +1810,88 @@ function getFaseAtual(hoje) {
   return { nome: '🔥 Ataque', desc: 'Destruir os tópicos fracos um a um.' };
 }
 
-// Monta lista ordenada de tópicos a estudar: fracos por prioridade, depois médios
-// Monta lista ordenada de tópicos a estudar para o cronograma
-// Inclui: fracos + sem_questoes (prioridade máxima) + médios (por peso/incidência)
+// Monta lista ordenada de tópicos para o cronograma com balanceamento por disciplina
 function getTopicosParaCronograma() {
   const all = getAllTopicsAtual();
+  const incScore = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
 
-  // 1. Fracos (<70%) — prioridade máxima
-  const fracos = all.filter(t => t.pctAtual < 70 && t.q >= 3)
-    .sort((a, b) => getPriorityAtual(a) - getPriorityAtual(b));
+  // Conjunto de tópicos que já têm pelo menos 1 sessão registrada
+  const comSessao = new Set(
+    (state.sessoes || []).map(s => s.disc + '||' + s.topico.toLowerCase().trim())
+  );
 
-  // 2. Tópicos do edital SEM questões feitas — precisam ser estudados do zero
-  const semQuestoes = [];
-  CHECKLIST_DATA.forEach(sec => {
-    sec.topicos.forEach(item => {
-      const qBase = typeof item === 'string' ? 0 : (item.q || 0);
-      const txt = typeof item === 'string' ? item : item.t;
-      if (qBase === 0) {
-        semQuestoes.push({
-          nome: txt,
-          pctAtual: 0,
-          pctBase: 0,
-          q: 0,
-          disc: sec.cargo,
-          discNome: sec.disc.replace(/[📝⚖️🏛️📋🏢📊👥💰]/gu, '').trim(),
-          peso: sec.cargo === 'analista' ? 2 : 1,
-          inc: 'média',
-          semQuestoes: true,
-        });
-      }
-    });
+  // 1. NUNCA ESTUDADOS — tópicos de DISCIPLINAS_MPAL sem nenhuma sessão registrada
+  //    São os "pontos cegos" — o candidato nem sabe o que não sabe
+  const naoVistos = all.filter(t => {
+    const key = t.disc + '||' + t.nome.toLowerCase().trim();
+    return !comSessao.has(key);
+  }).sort((a, b) => {
+    // Ordem: maior peso → maior incidência → menor pct base
+    if (b.peso !== a.peso) return b.peso - a.peso;
+    const ia = incScore[a.inc] || 2, ib = incScore[b.inc] || 2;
+    if (ib !== ia) return ib - ia;
+    return a.pct - b.pct;
   });
 
-  // 3. Médios (70-85%) ordenados por: peso desc, então pct asc
-  // — só os de peso 2 primeiro, depois peso 1
-  const medios = all.filter(t => t.pctAtual >= 70 && t.pctAtual <= 85 && t.q >= 5)
+  // 2. FRACOS COM SESSÃO — tópicos onde já estudou mas ainda < 70%
+  const fracos = all.filter(t => {
+    const key = t.disc + '||' + t.nome.toLowerCase().trim();
+    return comSessao.has(key) && t.pctAtual < 70;
+  }).sort((a, b) => getPriorityAtual(a) - getPriorityAtual(b));
+
+  // 3. MÉDIOS — 70–85%, priorizados por peso e incidência
+  const medios = all.filter(t => t.pctAtual >= 70 && t.pctAtual <= 85)
     .sort((a, b) => {
-      if (b.peso !== a.peso) return b.peso - a.peso; // peso maior primeiro
-      if (b.inc !== a.inc) {
-        const s = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
-        return (s[b.inc]||2) - (s[a.inc]||2); // maior incidência primeiro
-      }
-      return a.pctAtual - b.pctAtual; // menor % primeiro
+      if (b.peso !== a.peso) return b.peso - a.peso;
+      const ia = incScore[a.inc] || 2, ib = incScore[b.inc] || 2;
+      if (ib !== ia) return ib - ia;
+      return a.pctAtual - b.pctAtual;
     });
 
-  return { fracos, semQuestoes, medios };
+  // 4. Intercala por disciplina para garantir equilíbrio
+  //    Em vez de esgotar Português inteiro antes de passar pra Administrativo,
+  //    pega 1 de cada disciplina em rodízio.
+  function intercalarPorDisc(lista) {
+    const porDisc = {};
+    for (const t of lista) {
+      if (!porDisc[t.disc]) porDisc[t.disc] = [];
+      porDisc[t.disc].push(t);
+    }
+    const discs = Object.keys(porDisc);
+    const result = [];
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const d of discs) {
+        if (porDisc[d].length > 0) {
+          result.push(porDisc[d].shift());
+          changed = true;
+        }
+      }
+    }
+    return result;
+  }
+
+  return {
+    naoVistos: intercalarPorDisc(naoVistos),
+    fracos:    intercalarPorDisc(fracos),
+    medios:    intercalarPorDisc(medios),
+    semQuestoes: [] // mantém compatibilidade
+  };
 }
 function buildCronograma() {
   const hoje = new Date();
   hoje.setHours(0,0,0,0);
   const diasTotais = getDiasUteis(hoje, CUTOFF_DATE);
-  const { fracos, semQuestoes, medios } = getTopicosParaCronograma();
-  const tpdFraco = Math.max(1, Math.min(2, Math.ceil((fracos.length + semQuestoes.length) / Math.max(diasTotais * 0.7, 1))));
+  const { naoVistos, fracos, semQuestoes, medios } = getTopicosParaCronograma();
+  // Prioridade: não-vistos + fracos juntos no bloco de foco
+  const focoPrincipal = [...naoVistos, ...fracos]; // intercalados por disc
+  const tpdFoco = Math.max(1, Math.min(2, Math.ceil(focoPrincipal.length / Math.max(diasTotais * 0.7, 1))));
   const tpdMedio = Math.max(1, Math.ceil(medios.length / Math.max(diasTotais * 0.5, 1)));
-  const topicosTotal = fracos.length + semQuestoes.length + medios.length;
+  const topicosTotal = focoPrincipal.length + medios.length;
 
   const dias = [];
-  let fracoIdx = 0, semQIdx = 0, medioIdx = 0;
+  let focoIdx = 0, semQIdx = 0, medioIdx = 0;
   let cur = new Date(hoje);
 
   while (cur <= CUTOFF_DATE) {
@@ -1895,8 +1920,8 @@ function buildCronograma() {
       const blocos = [];
       const loteFraco = [], loteSem = [], loteMedio = [];
 
-      for (let i = 0; i < tpdFraco && fracoIdx < fracos.length; i++, fracoIdx++) loteFraco.push(fracos[fracoIdx]);
-      for (let i = loteFraco.length; i < tpdFraco && semQIdx < semQuestoes.length; i++, semQIdx++) loteSem.push(semQuestoes[semQIdx]);
+      // Pega tpdFoco tópicos do pool principal (não-vistos + fracos intercalados)
+      for (let i = 0; i < tpdFoco && focoIdx < focoPrincipal.length; i++, focoIdx++) loteFraco.push(focoPrincipal[focoIdx]);
       if (medioIdx < medios.length) loteMedio.push(medios[medioIdx++]);
 
       // Revisão rápida (30 min)
@@ -1906,10 +1931,25 @@ function buildCronograma() {
       // Foco fracos/sem-questões (90 min)
       if (loteFraco.length > 0 || loteSem.length > 0) {
         const itens = [
-          ...loteFraco.map(t => ({ nome: t.nome, detalhe: `🔴 ${t.pctAtual}% atual · ${t.discNome.split(' ')[0]} · Meta: ≥90% · 20 questões FCC · Anotar todos os erros`, pct: t.pctAtual })),
-          ...loteSem.map(t => ({ nome: t.nome, detalhe: `📭 Sem questões feitas · ${t.discNome.split(/[-—]/)[0].trim()} · Estudar conceito + 15 questões iniciais · Tópico do edital ainda não trabalhado`, pct: null }))
+          ...loteFraco.map(t => {
+            const key = t.disc + '||' + t.nome.toLowerCase().trim();
+            const comSessao = new Set((state.sessoes||[]).map(s=>s.disc+'||'+s.topico.toLowerCase().trim()));
+            const naoVisto = !comSessao.has(key);
+            return {
+              nome: t.nome,
+              pct: naoVisto ? null : t.pctAtual,
+              detalhe: naoVisto
+                ? `📭 Ainda não estudado · ${t.discNome.split('(')[0].trim()} · Estudar o conceito + 15 questões iniciais · Incidência: ${t.inc}`
+                : `🔴 ${t.pctAtual}% atual · ${t.discNome.split('(')[0].trim()} · Meta: ≥90% · 20 questões FCC · Anotar todos os erros`
+            };
+          })
         ];
-        blocos.push({ tipo: 'foco', hora: '07:30 – 09:00', nome: `🔥 Foco Total — Críticos${loteSem.length > 0 ? ' + Novos do Edital' : ''}`, itens });
+        const temNaoVisto = loteFraco.some(t => {
+          const key = t.disc + '||' + t.nome.toLowerCase().trim();
+          const cs = new Set((state.sessoes||[]).map(s=>s.disc+'||'+s.topico.toLowerCase().trim()));
+          return !cs.has(key);
+        });
+        blocos.push({ tipo: 'foco', hora: '07:30 – 09:00', nome: `🔥 Foco Total —${temNaoVisto ? ' Novos + ' : ' '}Críticos`, itens });
       }
 
       // Consolidação médio (45 min)
@@ -1987,8 +2027,8 @@ function buildCronograma() {
     rfCur.setDate(rfCur.getDate() + 1);
   }
 
-  return { dias, retaFinal, diasTotais, topicosTotal, tpdFraco, tpdMedio,
-           nFracos: fracos.length, nSem: semQuestoes.length, nMedios: medios.length };
+  return { dias, retaFinal, diasTotais, topicosTotal, tpdFoco, tpdMedio,
+           nFracos: fracos.length, nNaoVistos: naoVistos.length, nMedios: medios.length };
 }
 
 let currentPlanoTab = 'hoje';
@@ -2013,7 +2053,7 @@ function renderPlanoContainer() {
   const el2 = document.getElementById('ps-topicos');
   if (el2) el2.textContent = cronograma.topicosTotal;
   const el3 = document.getElementById('ps-tpd');
-  if (el3) el3.textContent = cronograma.tpdFraco + '+' + cronograma.tpdMedio + '/dia';
+  if (el3) el3.textContent = cronograma.tpdFoco + '+' + cronograma.tpdMedio + '/dia';
   const el4 = document.getElementById('ps-fase');
   if (el4) el4.textContent = fase.nome;
 
@@ -2022,7 +2062,7 @@ function renderPlanoContainer() {
     if (diasParaCutoff <= 0) {
       alertEl.innerHTML = `<strong>🔒 Reta Final ativada!</strong> Você está a ${Math.ceil((EXAM_DATE_LOCAL-hoje)/86400000)} dias da prova. Somente revisão e simulados agora.`;
     } else {
-      alertEl.innerHTML = `<strong>${fase.nome}:</strong> ${fase.desc} · ${diasRestantes} dias disponíveis para cobrir ${cronograma.nFracos}🔴 fracos + ${cronograma.nSem}📭 sem questões + ${cronograma.nMedios}🟡 médios = ${cronograma.topicosTotal} tópicos.`;
+      alertEl.innerHTML = `<strong>${fase.nome}:</strong> ${fase.desc} · ${diasRestantes} dias disponíveis · ${cronograma.nNaoVistos}📭 não estudados + ${cronograma.nFracos}🔴 fracos + ${cronograma.nMedios}🟡 médios = ${cronograma.topicosTotal} tópicos.`;
     }
   }
 
@@ -2940,25 +2980,18 @@ function atualizarTopicosDisp() {
   const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
   if (!discObj) return;
 
-  // Usa ÍNDICE como value — evita que aspas nos nomes quebrem o HTML
   sel.innerHTML = '<option value="">— Selecione o tópico —</option>' +
-    discObj.topicos.map((t, idx) => {
+    discObj.topicos.map(t => {
       const pctAtual = getPctCombinado(disc, t.nome, t.pct, t.q);
       const status = pctAtual < 70 ? '🔴' : pctAtual <= 85 ? '🟡' : '🟢';
-      return `<option value="${idx}">${status} ${t.nome} (${pctAtual}%)</option>`;
+      return `<option value="${t.nome}">${status} ${t.nome} (${pctAtual}%)</option>`;
     }).join('');
 }
 
 function syncTopicoInput() {
-  const disc = document.getElementById('upd-disc')?.value;
   const sel = document.getElementById('upd-topic-sel');
   const inp = document.getElementById('upd-topic');
-  if (sel && inp && sel.value !== '') {
-    // Busca nome real pelo índice — preserva aspas e caracteres especiais
-    const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
-    const idx = parseInt(sel.value);
-    if (discObj && !isNaN(idx)) inp.value = discObj.topicos[idx]?.nome || '';
-  }
+  if (sel && inp && sel.value) inp.value = sel.value;
   calcPct();
 }
 
