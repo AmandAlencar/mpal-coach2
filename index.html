@@ -1810,88 +1810,89 @@ function getFaseAtual(hoje) {
   return { nome: '🔥 Ataque', desc: 'Destruir os tópicos fracos um a um.' };
 }
 
-// Monta lista ordenada de tópicos para o cronograma com balanceamento por disciplina
+// Monta lista ordenada de tópicos a estudar: fracos por prioridade, depois médios
+// Monta lista ordenada de tópicos a estudar para o cronograma
+// Inclui: fracos + sem_questoes (prioridade máxima) + médios (por peso/incidência)
+// ── Intercala tópicos por disciplina para garantir equilíbrio ──────────────
+function intercalarPorDisc(lista) {
+  const porDisc = {};
+  for (const t of lista) {
+    const k = t.disc || 'geral';
+    if (!porDisc[k]) porDisc[k] = [];
+    porDisc[k].push(t);
+  }
+  const discs = Object.keys(porDisc);
+  const result = [];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const d of discs) {
+      if (porDisc[d].length > 0) { result.push(porDisc[d].shift()); changed = true; }
+    }
+  }
+  return result;
+}
+
 function getTopicosParaCronograma() {
   const all = getAllTopicsAtual();
-  const incScore = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
+  const INC = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
 
-  // Conjunto de tópicos que já têm pelo menos 1 sessão registrada
+  // Quais tópicos já têm sessão registrada
   const comSessao = new Set(
     (state.sessoes || []).map(s => s.disc + '||' + s.topico.toLowerCase().trim())
   );
 
-  // 1. NUNCA ESTUDADOS — tópicos de DISCIPLINAS_MPAL sem nenhuma sessão registrada
-  //    São os "pontos cegos" — o candidato nem sabe o que não sabe
-  const naoVistos = all.filter(t => {
-    const key = t.disc + '||' + t.nome.toLowerCase().trim();
-    return !comSessao.has(key);
-  }).sort((a, b) => {
-    // Ordem: maior peso → maior incidência → menor pct base
-    if (b.peso !== a.peso) return b.peso - a.peso;
-    const ia = incScore[a.inc] || 2, ib = incScore[b.inc] || 2;
-    if (ib !== ia) return ib - ia;
-    return a.pct - b.pct;
-  });
-
-  // 2. FRACOS COM SESSÃO — tópicos onde já estudou mas ainda < 70%
-  const fracos = all.filter(t => {
-    const key = t.disc + '||' + t.nome.toLowerCase().trim();
-    return comSessao.has(key) && t.pctAtual < 70;
-  }).sort((a, b) => getPriorityAtual(a) - getPriorityAtual(b));
-
-  // 3. MÉDIOS — 70–85%, priorizados por peso e incidência
-  const medios = all.filter(t => t.pctAtual >= 70 && t.pctAtual <= 85)
+  // ── BLOCO 60%: Não estudados + Fracos ───────────────────────────────────
+  // Não estudados: nunca registrou sessão neste tópico
+  const naoVistos = all.filter(t => !comSessao.has(t.disc + '||' + t.nome.toLowerCase().trim()))
     .sort((a, b) => {
       if (b.peso !== a.peso) return b.peso - a.peso;
-      const ia = incScore[a.inc] || 2, ib = incScore[b.inc] || 2;
-      if (ib !== ia) return ib - ia;
-      return a.pctAtual - b.pctAtual;
+      return (INC[b.inc]||2) - (INC[a.inc]||2);
     });
 
-  // 4. Intercala por disciplina para garantir equilíbrio
-  //    Em vez de esgotar Português inteiro antes de passar pra Administrativo,
-  //    pega 1 de cada disciplina em rodízio.
-  function intercalarPorDisc(lista) {
-    const porDisc = {};
-    for (const t of lista) {
-      if (!porDisc[t.disc]) porDisc[t.disc] = [];
-      porDisc[t.disc].push(t);
-    }
-    const discs = Object.keys(porDisc);
-    const result = [];
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const d of discs) {
-        if (porDisc[d].length > 0) {
-          result.push(porDisc[d].shift());
-          changed = true;
-        }
-      }
-    }
-    return result;
-  }
+  // Fracos: tem sessão mas ainda < 70%
+  const fracos = all.filter(t =>
+    comSessao.has(t.disc + '||' + t.nome.toLowerCase().trim()) && t.pctAtual < 70
+  ).sort((a, b) => {
+    // Prioriza: maior incidência FCC → menor %
+    if (b.peso !== a.peso) return b.peso - a.peso;
+    const di = (INC[b.inc]||2) - (INC[a.inc]||2);
+    if (di !== 0) return di;
+    return a.pctAtual - b.pctAtual;
+  });
 
-  return {
-    naoVistos: intercalarPorDisc(naoVistos),
-    fracos:    intercalarPorDisc(fracos),
-    medios:    intercalarPorDisc(medios),
-    semQuestoes: [] // mantém compatibilidade
-  };
+  // Pool 60%: intercala não-vistos e fracos por disciplina para cobrir todas as matérias
+  const pool60 = intercalarPorDisc([...naoVistos, ...fracos]);
+
+  // ── BLOCO 40%: Consolidação — médios e fortes, priorizando mais cobrados ──
+  const consolidacao = all.filter(t => t.pctAtual >= 70)
+    .sort((a, b) => {
+      // Maior incidência FCC primeiro; empate: menor % (mais longe da meta)
+      const di = (INC[b.inc]||2) - (INC[a.inc]||2);
+      if (di !== 0) return di;
+      if (b.peso !== a.peso) return b.peso - a.peso;
+      return a.pctAtual - b.pctAtual;
+    });
+  const pool40 = intercalarPorDisc(consolidacao);
+
+  return { pool60, pool40, naoVistos, fracos, medios: consolidacao };
 }
+
 function buildCronograma() {
   const hoje = new Date();
   hoje.setHours(0,0,0,0);
   const diasTotais = getDiasUteis(hoje, CUTOFF_DATE);
-  const { naoVistos, fracos, semQuestoes, medios } = getTopicosParaCronograma();
-  // Prioridade: não-vistos + fracos juntos no bloco de foco
-  const focoPrincipal = [...naoVistos, ...fracos]; // intercalados por disc
-  const tpdFoco = Math.max(1, Math.min(2, Math.ceil(focoPrincipal.length / Math.max(diasTotais * 0.7, 1))));
-  const tpdMedio = Math.max(1, Math.ceil(medios.length / Math.max(diasTotais * 0.5, 1)));
-  const topicosTotal = focoPrincipal.length + medios.length;
+  const { pool60, pool40, naoVistos, fracos, medios } = getTopicosParaCronograma();
+
+  // 4h por dia: 30min revisão + 2h foco 60% (2 tópicos×60min) + 1h20 consolidação 40% (2 tópicos×40min) + 10min mini-sim
+  // Na prática: 2 tópicos no bloco 60%, 2 tópicos no bloco 40%
+  const tpd60 = 2; // tópicos por dia no bloco crítico
+  const tpd40 = 2; // tópicos por dia no bloco consolidação
+
+  const topicosTotal = pool60.length + pool40.length;
 
   const dias = [];
-  let focoIdx = 0, semQIdx = 0, medioIdx = 0;
+  let idx60 = 0, idx40 = 0;
   let cur = new Date(hoje);
 
   while (cur <= CUTOFF_DATE) {
@@ -1918,83 +1919,60 @@ function buildCronograma() {
       });
     } else {
       const blocos = [];
-      const loteFraco = [], loteSem = [], loteMedio = [];
+      const comSessao = new Set((state.sessoes||[]).map(s => s.disc+'||'+s.topico.toLowerCase().trim()));
 
-      // Pega tpdFoco tópicos do pool principal (não-vistos + fracos intercalados)
-      for (let i = 0; i < tpdFoco && focoIdx < focoPrincipal.length; i++, focoIdx++) loteFraco.push(focoPrincipal[focoIdx]);
-      if (medioIdx < medios.length) loteMedio.push(medios[medioIdx++]);
+      // Pega lote do pool 60% (críticos)
+      const lote60 = [];
+      for (let i = 0; i < tpd60 && idx60 < pool60.length; i++, idx60++) lote60.push(pool60[idx60]);
 
-      // Revisão rápida (30 min)
+      // Pega lote do pool 40% (consolidação)
+      const lote40 = [];
+      for (let i = 0; i < tpd40 && idx40 < pool40.length; i++, idx40++) lote40.push(pool40[idx40]);
+
+      // Bloco 1 — Revisão rápida (30 min)
       blocos.push({ tipo: 'revisao', hora: '07:00 – 07:30', nome: '🔁 Revisão Rápida — Erros de Ontem',
         itens: [{ nome: 'Questões erradas do dia anterior', detalhe: '5 questões dos tópicos que errou ontem — sem pular nenhum' }] });
 
-      // Foco fracos/sem-questões (90 min)
-      if (loteFraco.length > 0 || loteSem.length > 0) {
-        const itens = [
-          ...loteFraco.map(t => {
-            const key = t.disc + '||' + t.nome.toLowerCase().trim();
-            const comSessao = new Set((state.sessoes||[]).map(s=>s.disc+'||'+s.topico.toLowerCase().trim()));
-            const naoVisto = !comSessao.has(key);
+      // Bloco 2 — 60% Foco críticos (2h: 07:30–09:30)
+      if (lote60.length > 0) {
+        blocos.push({
+          tipo: 'foco', hora: '07:30 – 09:30',
+          nome: '🔥 60% — Novos + Críticos (Alta Prioridade)',
+          itens: lote60.map(t => {
+            const naoVisto = !comSessao.has(t.disc + '||' + t.nome.toLowerCase().trim());
             return {
               nome: t.nome,
               pct: naoVisto ? null : t.pctAtual,
               detalhe: naoVisto
-                ? `📭 Ainda não estudado · ${t.discNome.split('(')[0].trim()} · Estudar o conceito + 15 questões iniciais · Incidência: ${t.inc}`
-                : `🔴 ${t.pctAtual}% atual · ${t.discNome.split('(')[0].trim()} · Meta: ≥90% · 20 questões FCC · Anotar todos os erros`
+                ? `📭 Nunca estudado · ${t.discNome.split('(')[0].trim()} · Incidência FCC: ${t.inc} · Estudar conceito + 15 questões iniciais`
+                : `🔴 ${t.pctAtual}% · ${t.discNome.split('(')[0].trim()} · Incidência FCC: ${t.inc} · 20 questões · Anotar todos os erros`
             };
           })
-        ];
-        const temNaoVisto = loteFraco.some(t => {
-          const key = t.disc + '||' + t.nome.toLowerCase().trim();
-          const cs = new Set((state.sessoes||[]).map(s=>s.disc+'||'+s.topico.toLowerCase().trim()));
-          return !cs.has(key);
         });
-        blocos.push({ tipo: 'foco', hora: '07:30 – 09:00', nome: `🔥 Foco Total —${temNaoVisto ? ' Novos + ' : ' '}Críticos`, itens });
       }
 
-      // Consolidação médio (45 min)
-      if (loteMedio.length > 0) {
-        blocos.push({ tipo: 'consolidacao', hora: '09:00 – 09:45', nome: '📈 Consolidação — Subir Médio para 90%+',
-          itens: loteMedio.map(t => ({ nome: t.nome, detalhe: `🟡 ${t.pctAtual}% atual · ${t.discNome.split(' ')[0]} · 15 questões · Foco nos pontos de erro`, pct: t.pctAtual })) });
+      // Bloco 3 — 40% Consolidação (1h20: 09:30–10:50) — mais cobrados primeiro
+      if (lote40.length > 0) {
+        blocos.push({
+          tipo: 'consolidacao', hora: '09:30 – 10:50',
+          nome: '📈 40% — Consolidação por Incidência FCC',
+          itens: lote40.map(t => ({
+            nome: t.nome,
+            pct: t.pctAtual,
+            detalhe: `${t.pctAtual >= 86 ? '🟢' : '🟡'} ${t.pctAtual}% · ${t.discNome.split('(')[0].trim()} · Incidência FCC: ${t.inc} · 15 questões · consolidar acima de 90%`
+          }))
+        });
       }
 
-      // Mini-simulado (30 min)
-      const tudo = [...loteFraco, ...loteSem, ...loteMedio];
+      // Bloco 4 — Mini-simulado (10:50–11:00)
+      const tudo = [...lote60, ...lote40];
       blocos.push(tudo.length > 0
-        ? { tipo: 'simulado', hora: loteMedio.length > 0 ? '09:45 – 10:15' : '09:00 – 09:30', nome: '📝 Mini-Simulado de Fechamento',
-            itens: [{ nome: `${tudo.length * 5} questões misturadas dos tópicos do dia`, detalhe: 'Condição de prova — sem consulta — cronometre — registre erros para revisão amanhã' }] }
+        ? { tipo: 'simulado', hora: '10:50 – 11:00', nome: '📝 Fechamento — Anotação de Erros',
+            itens: [{ nome: `Registrar erros dos ${tudo.length} tópicos do dia`, detalhe: 'Anote no caderno de erros · registre as sessões na plataforma · revise amanhã' }] }
         : { tipo: 'simulado', hora: '07:00 – 11:00', nome: '📝 Todos os Tópicos Cobertos — Simulado!',
-            itens: [{ nome: 'Simulado completo de fixação', detalhe: 'Parabéns! Todos os tópicos foram cobertos. Foco total em simulados e revisão de erros.' }] });
+            itens: [{ nome: 'Simulado completo de fixação', detalhe: 'Parabéns! Todos os tópicos foram cobertos. Foco total em simulados e revisão.' }] });
 
-      // ── PORTUGUÊS: bloco fixo 5x/semana (todos os dias úteis) ──
-      // Tópicos rotacionam pela lista de fracos/médios de português
-      const ptTopicos = [
-        { nome: 'Concordância nominal e concordância verbal',      pct: 61, dica: '20 questões · tópico mais cobrado da FCC em Português' },
-        { nome: 'Regência nominal e regência verbal',              pct: 60, dica: '15 questões · verbos de regência especial: aspirar, assistir, visar, obedecer' },
-        { nome: 'Emprego do sinal indicativo de crase',            pct: 55, dica: '15 questões · regras: locuções adverbiais, pronomes demonstrativos, aquela/aquilo' },
-        { nome: 'Coordenação e subordinação',                      pct: 42, dica: '15 questões · identificar tipo de oração e conectivo adequado' },
-        { nome: 'Pronomes (uso, colocação e casos especiais)',      pct: 64, dica: '15 questões · pronomes relativos, pessoais, colocação pronominal' },
-        { nome: 'Vozes do verbo (ativa, passiva, reflexiva)',       pct: 69, dica: '15 questões · transformação de voz + identificação em texto' },
-        { nome: 'Reescrita e equivalência de estruturas',          pct: 70, dica: '15 questões · substituição sem alterar sentido — item frequente na FCC' },
-        { nome: 'Pontuação (vírgula, ponto-e-vírgula, dois-pontos)', pct: 73, dica: '15 questões · vírgula com orações adjetivas e adjuntos adverbiais deslocados' },
-        { nome: 'Morfossintaxe (classes e funções das palavras)',   pct: 76, dica: '10 questões · identificar classe e função na frase' },
-        { nome: 'Compreensão e interpretação de textos',           pct: 79, dica: '10 questões · textos longos estilo FCC · marcar inferências x dados explícitos' },
-      ];
-      // Índice do dia (conta dias úteis desde hoje)
-      const ptIdx = dias.filter(d => !d.isWeekend).length % ptTopicos.length;
-      const ptHoje = ptTopicos[ptIdx];
-      blocos.push({
-        tipo: 'portugues',
-        hora: '10:15 – 11:00',
-        nome: '📝 Português — Bloco Diário (5x/semana)',
-        itens: [{
-          nome: ptHoje.nome,
-          detalhe: `${ptHoje.pct}% base · ${ptHoje.dica}`,
-          pct: ptHoje.pct
-        }]
-      });
-
-      dias.push({ isoStr, dateStr, isHoje, isWeekend: false, blocos, topicosCount: loteFraco.length + loteSem.length + loteMedio.length });
+      dias.push({ isoStr, dateStr, isHoje, isWeekend: false, blocos, topicosCount: lote60.length + lote40.length });
     }
     cur.setDate(cur.getDate() + 1);
   }
@@ -2027,8 +2005,8 @@ function buildCronograma() {
     rfCur.setDate(rfCur.getDate() + 1);
   }
 
-  return { dias, retaFinal, diasTotais, topicosTotal, tpdFoco, tpdMedio,
-           nFracos: fracos.length, nNaoVistos: naoVistos.length, nMedios: medios.length };
+  return { dias, retaFinal, diasTotais, topicosTotal, tpd60, tpd40,
+           nNaoVistos: naoVistos.length, nFracos: fracos.length, nMedios: medios.length };
 }
 
 let currentPlanoTab = 'hoje';
@@ -2053,7 +2031,7 @@ function renderPlanoContainer() {
   const el2 = document.getElementById('ps-topicos');
   if (el2) el2.textContent = cronograma.topicosTotal;
   const el3 = document.getElementById('ps-tpd');
-  if (el3) el3.textContent = cronograma.tpdFoco + '+' + cronograma.tpdMedio + '/dia';
+  if (el3) el3.textContent = cronograma.tpd60 + '+' + cronograma.tpd40 + '/dia';
   const el4 = document.getElementById('ps-fase');
   if (el4) el4.textContent = fase.nome;
 
@@ -2062,7 +2040,7 @@ function renderPlanoContainer() {
     if (diasParaCutoff <= 0) {
       alertEl.innerHTML = `<strong>🔒 Reta Final ativada!</strong> Você está a ${Math.ceil((EXAM_DATE_LOCAL-hoje)/86400000)} dias da prova. Somente revisão e simulados agora.`;
     } else {
-      alertEl.innerHTML = `<strong>${fase.nome}:</strong> ${fase.desc} · ${diasRestantes} dias disponíveis · ${cronograma.nNaoVistos}📭 não estudados + ${cronograma.nFracos}🔴 fracos + ${cronograma.nMedios}🟡 médios = ${cronograma.topicosTotal} tópicos.`;
+      alertEl.innerHTML = `<strong>${fase.nome}:</strong> ${fase.desc} · ${diasRestantes} dias disponíveis para cobrir ${cronograma.nNaoVistos}📭 não estudados + ${cronograma.nFracos}🔴 fracos + ${cronograma.nMedios}🟡 médios = ${cronograma.topicosTotal} tópicos.`;
     }
   }
 
