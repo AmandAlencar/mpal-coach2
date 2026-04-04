@@ -1864,15 +1864,19 @@ function getTopicosParaCronograma() {
   // Pool 60%: intercala não-vistos e fracos por disciplina para cobrir todas as matérias
   const pool60 = intercalarPorDisc([...naoVistos, ...fracos]);
 
-  // ── BLOCO 40%: Consolidação — médios e fortes, priorizando mais cobrados ──
-  const consolidacao = all.filter(t => t.pctAtual >= 70)
-    .sort((a, b) => {
-      // Maior incidência FCC primeiro; empate: menor % (mais longe da meta)
-      const di = (INC[b.inc]||2) - (INC[a.inc]||2);
-      if (di !== 0) return di;
-      if (b.peso !== a.peso) return b.peso - a.peso;
-      return a.pctAtual - b.pctAtual;
-    });
+  // Conjunto de nomes já no pool60 — para evitar duplicatas no pool40
+  const nomesPool60 = new Set(pool60.map(t => t.disc + '||' + t.nome.toLowerCase().trim()));
+
+  // ── BLOCO 40%: Consolidação — exclui qualquer tópico já no pool60 ──
+  const consolidacao = all.filter(t =>
+    t.pctAtual >= 70 &&
+    !nomesPool60.has(t.disc + '||' + t.nome.toLowerCase().trim())
+  ).sort((a, b) => {
+    const di = (INC[b.inc]||2) - (INC[a.inc]||2);
+    if (di !== 0) return di;
+    if (b.peso !== a.peso) return b.peso - a.peso;
+    return a.pctAtual - b.pctAtual;
+  });
   const pool40 = intercalarPorDisc(consolidacao);
 
   return { pool60, pool40, naoVistos, fracos, medios: consolidacao };
@@ -1965,7 +1969,7 @@ function buildCronograma() {
       }
 
       // Bloco 4 — Português fixo diário (10:50–11:30) — sempre presente, rotaciona tópicos
-      const ptTopicos = [
+      const ptNomes = [
         { nome: 'Concordância (Verbal e Nominal)',        inc: 'alta',  dica: '20 questões · sujeito posposto, expressões partitivas, verbos impessoais' },
         { nome: 'Regência Nominal e Verbal',              inc: 'alta',  dica: '15 questões · verbos: aspirar, assistir, visar, obedecer, preferir' },
         { nome: 'Crase',                                  inc: 'alta',  dica: '15 questões · locuções adverbiais, pronomes demonstrativos, aquela/aquilo' },
@@ -1977,13 +1981,18 @@ function buildCronograma() {
         { nome: 'Reescrita e Substituição',               inc: 'alta',  dica: '15 questões · substituição sem alterar sentido — item frequente na FCC' },
         { nome: 'Interpretação de Textos',                inc: 'alta',  dica: '10 questões · textos longos estilo FCC · inferências x dados explícitos' },
       ];
-      const ptIdx = dias.filter(d => !d.isWeekend).length % ptTopicos.length;
-      const ptHoje = ptTopicos[ptIdx];
+      const ptIdx = dias.filter(d => !d.isWeekend).length % ptNomes.length;
+      const ptDef = ptNomes[ptIdx];
+      // Busca % real do tópico (se já tiver sessão registrada)
+      const ptReal = getAllTopicsAtual().find(t =>
+        t.disc === 'portugues' && t.nome.toLowerCase().trim() === ptDef.nome.toLowerCase().trim()
+      );
+      const ptPct = ptReal ? ptReal.pctAtual : null;
       blocos.push({
         tipo: 'portugues', hora: '10:50 – 11:30',
         nome: '📝 Português — Bloco Fixo Diário',
-        itens: [{ nome: ptHoje.nome, pct: null,
-          detalhe: `Incidência FCC: ${ptHoje.inc} · ${ptHoje.dica}` }]
+        itens: [{ nome: ptDef.nome, pct: ptPct,
+          detalhe: `Incidência FCC: ${ptDef.inc}${ptPct !== null ? ' · ' + ptPct + '% atual' : ' · nunca estudado'} · ${ptDef.dica}` }]
       });
 
       // Bloco 5 — Fechamento (11:30)
@@ -2113,7 +2122,7 @@ function renderPlanoContainer() {
           ${dia.blocos.map((bloco, bi) => bloco.itens.map((item, ii) => {
             const key = `${dia.isoStr}-${bi}-${ii}`;
             const done = state.planoDone[key];
-            const pctColor = item.pct !== undefined ? getStatusColor(item.pct) : 'var(--text3)';
+            const pctColor = (item.pct !== undefined && item.pct !== null) ? getStatusColor(item.pct) : 'var(--text3)';
             return `
               <div class="plan-item ${done ? 'done' : ''}" onclick="togglePlanItem('${key}', this)">
                 <div class="plan-check">${done ? '✓' : ''}</div>
@@ -2123,7 +2132,7 @@ function renderPlanoContainer() {
                   </div>
                   <div class="plan-item-name">
                     ${item.nome}
-                    ${item.pct !== undefined ? `<span style="font-family:'Syne';font-size:12px;font-weight:700;color:${pctColor};margin-left:8px">${item.pct}%</span>` : ''}
+                    ${(item.pct !== undefined && item.pct !== null) ? `<span style="font-family:'Syne';font-size:12px;font-weight:700;color:${pctColor};margin-left:8px">${item.pct}%</span>` : ''}
                   </div>
                   <div class="plan-item-detail">${item.detalhe}</div>
                 </div>
