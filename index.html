@@ -953,7 +953,72 @@
   <div class="tabs">
     <div class="tab active" onclick="setSimTab('focado', this)">🎯 Tópicos Fracos</div>
     <div class="tab" onclick="setSimTab('misto', this)">🔀 Misto Estilo FCC</div>
+    <div class="tab" onclick="setSimTab('externo', this)">📥 Simulado Externo</div>
     <div class="tab" onclick="setSimTab('resultado', this)">📊 Resultados</div>
+  </div>
+
+  <!-- FORMULÁRIO SIMULADO EXTERNO -->
+  <div id="sim-externo" style="display:none">
+    <div class="card">
+      <div class="section-title">📥 Registrar Simulado Externo</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:16px">Trouxe resultado de um simulado do Qconcursos, impresso ou outra plataforma? Registre aqui para entrar no histórico e calcular sua evolução.</p>
+      <div class="grid-2" style="gap:14px">
+        <div>
+          <div class="input-group">
+            <div class="input-label">Fonte / Origem</div>
+            <input type="text" id="ext-fonte" placeholder="Ex: Qconcursos, Gran, impresso...">
+          </div>
+          <div class="input-group">
+            <div class="input-label">Data de realização</div>
+            <input type="text" id="ext-data" placeholder="Ex: 08/04/2026">
+          </div>
+          <div class="input-group">
+            <div class="input-label">Disciplina principal (opcional)</div>
+            <select id="ext-disc">
+              <option value="geral">Geral / Todas as disciplinas</option>
+              <option value="portugues">Língua Portuguesa</option>
+              <option value="dadm">Direito Administrativo</option>
+              <option value="dconst">Direito Constitucional</option>
+              <option value="afo">AFO</option>
+              <option value="adm">Administração Geral e Pública</option>
+              <option value="gp">Gestão de Pessoas</option>
+              <option value="leg">Legislação MPAL</option>
+              <option value="pmbok">PMBOK</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="grid-2" style="gap:10px;margin-bottom:14px">
+            <div class="input-group" style="margin-bottom:0">
+              <div class="input-label">Total de Questões</div>
+              <input type="number" id="ext-qtd" placeholder="Ex: 60" min="1" oninput="calcExtPct()">
+            </div>
+            <div class="input-group" style="margin-bottom:0">
+              <div class="input-label">Acertos</div>
+              <input type="number" id="ext-acertos" placeholder="Ex: 48" min="0" oninput="calcExtPct()">
+            </div>
+          </div>
+          <div id="ext-preview" style="display:none;background:var(--bg);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Resultado</div>
+            <div style="display:flex;align-items:center;gap:16px">
+              <div>
+                <div style="font-size:10px;color:var(--text3)">Aproveitamento</div>
+                <div id="ext-pct-show" style="font-family:'Syne';font-size:28px;font-weight:800">—%</div>
+              </div>
+              <div style="flex:1">
+                <div class="prog-bar lg"><div id="ext-bar" class="prog-bar-fill fill-weak" style="width:0%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="input-group">
+            <div class="input-label">Observações (opcional)</div>
+            <input type="text" id="ext-obs" placeholder="Ex: errei muito em licitações, rever...">
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="registrarSimuladoExterno()">📥 Registrar no Histórico</button>
+          <div id="ext-feedback" style="display:none;margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="sim-config" class="card">
@@ -1622,7 +1687,7 @@ function renderDashboard() {
         <div class="topic-rank">${i+1}</div>
         <div class="topic-info">
           <div class="topic-name">${t.nome}</div>
-          <div class="topic-meta">${t.discNome.split('(')[0].trim()} · ${t.q} questões · Incidência: ${t.inc}</div>
+          <div class="topic-meta">${t.discNome.split('(')[0].trim()} · ${t.qAtual ?? t.q} questões · Incidência: ${t.inc}</div>
           <div class="prog-bar sm"><div class="prog-bar-fill fill-weak" style="width:${t.pctAtual}%"></div></div>
         </div>
         <div class="topic-pct status-weak">${t.pctAtual}%</div>
@@ -1694,7 +1759,7 @@ function renderDiagnostico() {
             <td style="color:var(--text3);font-size:12px">${i+1}</td>
             <td class="disc-name" style="font-size:12px">${t.nome}</td>
             <td><span style="font-size:11px;color:var(--text2)">${t.discNome.replace(' (Específico)','').replace(' — Adm. Financeira e Orçamentária','')}</span></td>
-            <td style="text-align:right;font-size:12px">${t.q}</td>
+            <td style="text-align:right;font-size:12px">${t.qAtual ?? t.q}</td>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
                 <span style="font-family:'Syne';font-weight:700;color:${getStatusColor(t.pctAtual)}">${t.pctAtual}%</span>
@@ -1753,7 +1818,13 @@ function getAllTopicsAtual() {
   for (const disc of DISCIPLINAS_MPAL) {
     for (const t of disc.topicos) {
       const pctAtual = getPctCombinado(disc.key, t.nome, t.pct, t.q);
-      all.push({ ...t, disc: disc.key, discNome: disc.nome, peso: disc.peso, pctAtual, pctBase: t.pct });
+      // qAtual = questões base + todas as questões das sessões registradas neste tópico
+      const sessoesTopic = (state.sessoes || []).filter(s =>
+        s.disc === disc.key && s.topico.toLowerCase().trim() === t.nome.toLowerCase().trim()
+      );
+      const qSessoes = sessoesTopic.reduce((a, s) => a + s.qtd, 0);
+      const qAtual = t.q + qSessoes;
+      all.push({ ...t, disc: disc.key, discNome: disc.nome, peso: disc.peso, pctAtual, pctBase: t.pct, qAtual });
     }
   }
   return all;
@@ -1813,90 +1884,60 @@ function getFaseAtual(hoje) {
 // Monta lista ordenada de tópicos a estudar: fracos por prioridade, depois médios
 // Monta lista ordenada de tópicos a estudar para o cronograma
 // Inclui: fracos + sem_questoes (prioridade máxima) + médios (por peso/incidência)
-// ── Intercala tópicos por disciplina para garantir equilíbrio ──────────────
-function intercalarPorDisc(lista) {
-  const porDisc = {};
-  for (const t of lista) {
-    const k = t.disc || 'geral';
-    if (!porDisc[k]) porDisc[k] = [];
-    porDisc[k].push(t);
-  }
-  const discs = Object.keys(porDisc);
-  const result = [];
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const d of discs) {
-      if (porDisc[d].length > 0) { result.push(porDisc[d].shift()); changed = true; }
-    }
-  }
-  return result;
-}
-
 function getTopicosParaCronograma() {
   const all = getAllTopicsAtual();
-  const INC = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
 
-  // Quais tópicos já têm sessão registrada
-  const comSessao = new Set(
-    (state.sessoes || []).map(s => s.disc + '||' + s.topico.toLowerCase().trim())
-  );
+  // 1. Fracos (<70%) — prioridade máxima
+  const fracos = all.filter(t => t.pctAtual < 70 && t.q >= 3)
+    .sort((a, b) => getPriorityAtual(a) - getPriorityAtual(b));
 
-  // ── BLOCO 60%: Não estudados + Fracos ───────────────────────────────────
-  // Não estudados: nunca registrou sessão neste tópico
-  const naoVistos = all.filter(t => !comSessao.has(t.disc + '||' + t.nome.toLowerCase().trim()))
+  // 2. Tópicos do edital SEM questões feitas — precisam ser estudados do zero
+  const semQuestoes = [];
+  CHECKLIST_DATA.forEach(sec => {
+    sec.topicos.forEach(item => {
+      const qBase = typeof item === 'string' ? 0 : (item.q || 0);
+      const txt = typeof item === 'string' ? item : item.t;
+      if (qBase === 0) {
+        semQuestoes.push({
+          nome: txt,
+          pctAtual: 0,
+          pctBase: 0,
+          q: 0,
+          disc: sec.cargo,
+          discNome: sec.disc.replace(/[📝⚖️🏛️📋🏢📊👥💰]/gu, '').trim(),
+          peso: sec.cargo === 'analista' ? 2 : 1,
+          inc: 'média',
+          semQuestoes: true,
+        });
+      }
+    });
+  });
+
+  // 3. Médios (70-85%) ordenados por: peso desc, então pct asc
+  // — só os de peso 2 primeiro, depois peso 1
+  const medios = all.filter(t => t.pctAtual >= 70 && t.pctAtual <= 85 && t.q >= 5)
     .sort((a, b) => {
-      if (b.peso !== a.peso) return b.peso - a.peso;
-      return (INC[b.inc]||2) - (INC[a.inc]||2);
+      if (b.peso !== a.peso) return b.peso - a.peso; // peso maior primeiro
+      if (b.inc !== a.inc) {
+        const s = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
+        return (s[b.inc]||2) - (s[a.inc]||2); // maior incidência primeiro
+      }
+      return a.pctAtual - b.pctAtual; // menor % primeiro
     });
 
-  // Fracos: tem sessão mas ainda < 70%
-  const fracos = all.filter(t =>
-    comSessao.has(t.disc + '||' + t.nome.toLowerCase().trim()) && t.pctAtual < 70
-  ).sort((a, b) => {
-    // Prioriza: maior incidência FCC → menor %
-    if (b.peso !== a.peso) return b.peso - a.peso;
-    const di = (INC[b.inc]||2) - (INC[a.inc]||2);
-    if (di !== 0) return di;
-    return a.pctAtual - b.pctAtual;
-  });
-
-  // Pool 60%: intercala não-vistos e fracos por disciplina para cobrir todas as matérias
-  const pool60 = intercalarPorDisc([...naoVistos, ...fracos]);
-
-  // Conjunto de nomes já no pool60 — para evitar duplicatas no pool40
-  const nomesPool60 = new Set(pool60.map(t => t.disc + '||' + t.nome.toLowerCase().trim()));
-
-  // ── BLOCO 40%: Consolidação — exclui qualquer tópico já no pool60 ──
-  const consolidacao = all.filter(t =>
-    t.pctAtual >= 70 &&
-    !nomesPool60.has(t.disc + '||' + t.nome.toLowerCase().trim())
-  ).sort((a, b) => {
-    const di = (INC[b.inc]||2) - (INC[a.inc]||2);
-    if (di !== 0) return di;
-    if (b.peso !== a.peso) return b.peso - a.peso;
-    return a.pctAtual - b.pctAtual;
-  });
-  const pool40 = intercalarPorDisc(consolidacao);
-
-  return { pool60, pool40, naoVistos, fracos, medios: consolidacao };
+  return { fracos, semQuestoes, medios };
 }
-
 function buildCronograma() {
   const hoje = new Date();
   hoje.setHours(0,0,0,0);
   const diasTotais = getDiasUteis(hoje, CUTOFF_DATE);
-  const { pool60, pool40, naoVistos, fracos, medios } = getTopicosParaCronograma();
-
-  // 4h por dia: 30min revisão + 2h foco 60% (2 tópicos×60min) + 1h20 consolidação 40% (2 tópicos×40min) + 10min mini-sim
-  // Na prática: 2 tópicos no bloco 60%, 2 tópicos no bloco 40%
-  const tpd60 = 2; // tópicos por dia no bloco crítico
-  const tpd40 = 2; // tópicos por dia no bloco consolidação
-
-  const topicosTotal = pool60.length + pool40.length;
+  const { fracos, semQuestoes, medios } = getTopicosParaCronograma();
+  const tpdFraco = Math.max(1, Math.min(2, Math.ceil((fracos.length + semQuestoes.length) / Math.max(diasTotais * 0.7, 1))));
+  const tpdMedio = Math.max(1, Math.ceil(medios.length / Math.max(diasTotais * 0.5, 1)));
+  const topicosTotal = fracos.length + semQuestoes.length + medios.length;
 
   const dias = [];
-  let idx60 = 0, idx40 = 0;
+  let fracoIdx = 0, semQIdx = 0, medioIdx = 0;
   let cur = new Date(hoje);
 
   while (cur <= CUTOFF_DATE) {
@@ -1923,87 +1964,68 @@ function buildCronograma() {
       });
     } else {
       const blocos = [];
-      const comSessao = new Set((state.sessoes||[]).map(s => s.disc+'||'+s.topico.toLowerCase().trim()));
+      const loteFraco = [], loteSem = [], loteMedio = [];
 
-      // Pega lote do pool 60% (críticos)
-      const lote60 = [];
-      for (let i = 0; i < tpd60 && idx60 < pool60.length; i++, idx60++) lote60.push(pool60[idx60]);
+      for (let i = 0; i < tpdFraco && fracoIdx < fracos.length; i++, fracoIdx++) loteFraco.push(fracos[fracoIdx]);
+      for (let i = loteFraco.length; i < tpdFraco && semQIdx < semQuestoes.length; i++, semQIdx++) loteSem.push(semQuestoes[semQIdx]);
+      if (medioIdx < medios.length) loteMedio.push(medios[medioIdx++]);
 
-      // Pega lote do pool 40% (consolidação)
-      const lote40 = [];
-      for (let i = 0; i < tpd40 && idx40 < pool40.length; i++, idx40++) lote40.push(pool40[idx40]);
-
-      // Bloco 1 — Revisão rápida (30 min)
+      // Revisão rápida (30 min)
       blocos.push({ tipo: 'revisao', hora: '07:00 – 07:30', nome: '🔁 Revisão Rápida — Erros de Ontem',
         itens: [{ nome: 'Questões erradas do dia anterior', detalhe: '5 questões dos tópicos que errou ontem — sem pular nenhum' }] });
 
-      // Bloco 2 — 60% Foco críticos (2h: 07:30–09:30)
-      if (lote60.length > 0) {
-        blocos.push({
-          tipo: 'foco', hora: '07:30 – 09:30',
-          nome: '🔥 60% — Novos + Críticos (Alta Prioridade)',
-          itens: lote60.map(t => {
-            const naoVisto = !comSessao.has(t.disc + '||' + t.nome.toLowerCase().trim());
-            return {
-              nome: t.nome,
-              pct: naoVisto ? null : t.pctAtual,
-              detalhe: naoVisto
-                ? `📭 Nunca estudado · ${t.discNome.split('(')[0].trim()} · Incidência FCC: ${t.inc} · Estudar conceito + 15 questões iniciais`
-                : `🔴 ${t.pctAtual}% · ${t.discNome.split('(')[0].trim()} · Incidência FCC: ${t.inc} · 20 questões · Anotar todos os erros`
-            };
-          })
-        });
+      // Foco fracos/sem-questões (90 min)
+      if (loteFraco.length > 0 || loteSem.length > 0) {
+        const itens = [
+          ...loteFraco.map(t => ({ nome: t.nome, detalhe: `🔴 ${t.pctAtual}% atual · ${t.discNome.split(' ')[0]} · Meta: ≥90% · 20 questões FCC · Anotar todos os erros`, pct: t.pctAtual })),
+          ...loteSem.map(t => ({ nome: t.nome, detalhe: `📭 Sem questões feitas · ${t.discNome.split(/[-—]/)[0].trim()} · Estudar conceito + 15 questões iniciais · Tópico do edital ainda não trabalhado`, pct: null }))
+        ];
+        blocos.push({ tipo: 'foco', hora: '07:30 – 09:00', nome: `🔥 Foco Total — Críticos${loteSem.length > 0 ? ' + Novos do Edital' : ''}`, itens });
       }
 
-      // Bloco 3 — 40% Consolidação (1h20: 09:30–10:50) — mais cobrados primeiro
-      if (lote40.length > 0) {
-        blocos.push({
-          tipo: 'consolidacao', hora: '09:30 – 10:50',
-          nome: '📈 40% — Consolidação por Incidência FCC',
-          itens: lote40.map(t => ({
-            nome: t.nome,
-            pct: t.pctAtual,
-            detalhe: `${t.pctAtual >= 86 ? '🟢' : '🟡'} ${t.pctAtual}% · ${t.discNome.split('(')[0].trim()} · Incidência FCC: ${t.inc} · 15 questões · consolidar acima de 90%`
-          }))
-        });
+      // Consolidação médio (45 min)
+      if (loteMedio.length > 0) {
+        blocos.push({ tipo: 'consolidacao', hora: '09:00 – 09:45', nome: '📈 Consolidação — Subir Médio para 90%+',
+          itens: loteMedio.map(t => ({ nome: t.nome, detalhe: `🟡 ${t.pctAtual}% atual · ${t.discNome.split(' ')[0]} · 15 questões · Foco nos pontos de erro`, pct: t.pctAtual })) });
       }
 
-      // Bloco 4 — Português fixo diário (10:50–11:30) — sempre presente, rotaciona tópicos
-      const ptNomes = [
-        { nome: 'Concordância (Verbal e Nominal)',        inc: 'alta',  dica: '20 questões · sujeito posposto, expressões partitivas, verbos impessoais' },
-        { nome: 'Regência Nominal e Verbal',              inc: 'alta',  dica: '15 questões · verbos: aspirar, assistir, visar, obedecer, preferir' },
-        { nome: 'Crase',                                  inc: 'alta',  dica: '15 questões · locuções adverbiais, pronomes demonstrativos, aquela/aquilo' },
-        { nome: 'Partícula "Se"',                         inc: 'alta',  dica: '15 questões · índice de indeterminação vs partícula apassivadora' },
-        { nome: 'Colocação Pronominal',                   inc: 'média', dica: '15 questões · próclise, mesóclise, ênclise — gatilhos de cada posição' },
-        { nome: 'Vozes (Passiva e Ativa)',                inc: 'alta',  dica: '15 questões · transformação de voz + identificação em texto' },
-        { nome: 'Sintaxe (geral)',                        inc: 'alta',  dica: '15 questões · termos da oração, período composto, análise sintática' },
-        { nome: 'Pronomes Relativos',                     inc: 'média', dica: '15 questões · cujo/cuja, onde, quem, o qual — regência do antecedente' },
-        { nome: 'Reescrita e Substituição',               inc: 'alta',  dica: '15 questões · substituição sem alterar sentido — item frequente na FCC' },
-        { nome: 'Interpretação de Textos',                inc: 'alta',  dica: '10 questões · textos longos estilo FCC · inferências x dados explícitos' },
+      // Mini-simulado (30 min)
+      const tudo = [...loteFraco, ...loteSem, ...loteMedio];
+      blocos.push(tudo.length > 0
+        ? { tipo: 'simulado', hora: loteMedio.length > 0 ? '09:45 – 10:15' : '09:00 – 09:30', nome: '📝 Mini-Simulado de Fechamento',
+            itens: [{ nome: `${tudo.length * 5} questões misturadas dos tópicos do dia`, detalhe: 'Condição de prova — sem consulta — cronometre — registre erros para revisão amanhã' }] }
+        : { tipo: 'simulado', hora: '07:00 – 11:00', nome: '📝 Todos os Tópicos Cobertos — Simulado!',
+            itens: [{ nome: 'Simulado completo de fixação', detalhe: 'Parabéns! Todos os tópicos foram cobertos. Foco total em simulados e revisão de erros.' }] });
+
+      // ── PORTUGUÊS: bloco fixo 5x/semana (todos os dias úteis) ──
+      // Tópicos rotacionam pela lista de fracos/médios de português
+      const ptTopicos = [
+        { nome: 'Concordância nominal e concordância verbal',      pct: 61, dica: '20 questões · tópico mais cobrado da FCC em Português' },
+        { nome: 'Regência nominal e regência verbal',              pct: 60, dica: '15 questões · verbos de regência especial: aspirar, assistir, visar, obedecer' },
+        { nome: 'Emprego do sinal indicativo de crase',            pct: 55, dica: '15 questões · regras: locuções adverbiais, pronomes demonstrativos, aquela/aquilo' },
+        { nome: 'Coordenação e subordinação',                      pct: 42, dica: '15 questões · identificar tipo de oração e conectivo adequado' },
+        { nome: 'Pronomes (uso, colocação e casos especiais)',      pct: 64, dica: '15 questões · pronomes relativos, pessoais, colocação pronominal' },
+        { nome: 'Vozes do verbo (ativa, passiva, reflexiva)',       pct: 69, dica: '15 questões · transformação de voz + identificação em texto' },
+        { nome: 'Reescrita e equivalência de estruturas',          pct: 70, dica: '15 questões · substituição sem alterar sentido — item frequente na FCC' },
+        { nome: 'Pontuação (vírgula, ponto-e-vírgula, dois-pontos)', pct: 73, dica: '15 questões · vírgula com orações adjetivas e adjuntos adverbiais deslocados' },
+        { nome: 'Morfossintaxe (classes e funções das palavras)',   pct: 76, dica: '10 questões · identificar classe e função na frase' },
+        { nome: 'Compreensão e interpretação de textos',           pct: 79, dica: '10 questões · textos longos estilo FCC · marcar inferências x dados explícitos' },
       ];
-      const ptIdx = dias.filter(d => !d.isWeekend).length % ptNomes.length;
-      const ptDef = ptNomes[ptIdx];
-      // Busca % real do tópico (se já tiver sessão registrada)
-      const ptReal = getAllTopicsAtual().find(t =>
-        t.disc === 'portugues' && t.nome.toLowerCase().trim() === ptDef.nome.toLowerCase().trim()
-      );
-      const ptPct = ptReal ? ptReal.pctAtual : null;
+      // Índice do dia (conta dias úteis desde hoje)
+      const ptIdx = dias.filter(d => !d.isWeekend).length % ptTopicos.length;
+      const ptHoje = ptTopicos[ptIdx];
       blocos.push({
-        tipo: 'portugues', hora: '10:50 – 11:30',
-        nome: '📝 Português — Bloco Fixo Diário',
-        itens: [{ nome: ptDef.nome, pct: ptPct,
-          detalhe: `Incidência FCC: ${ptDef.inc}${ptPct !== null ? ' · ' + ptPct + '% atual' : ' · nunca estudado'} · ${ptDef.dica}` }]
+        tipo: 'portugues',
+        hora: '10:15 – 11:00',
+        nome: '📝 Português — Bloco Diário (5x/semana)',
+        itens: [{
+          nome: ptHoje.nome,
+          detalhe: `${ptHoje.pct}% base · ${ptHoje.dica}`,
+          pct: ptHoje.pct
+        }]
       });
 
-      // Bloco 5 — Fechamento (11:30)
-      const tudo = [...lote60, ...lote40];
-      blocos.push(tudo.length > 0
-        ? { tipo: 'simulado', hora: '11:30', nome: '📝 Fechamento — Anotação de Erros',
-            itens: [{ nome: `Registrar erros dos tópicos do dia`, detalhe: 'Anote no caderno de erros · registre as sessões na plataforma · revise amanhã' }] }
-        : { tipo: 'simulado', hora: '07:00 – 11:30', nome: '📝 Todos os Tópicos Cobertos — Simulado!',
-            itens: [{ nome: 'Simulado completo de fixação', detalhe: 'Parabéns! Todos os tópicos foram cobertos. Foco total em simulados e revisão.' }] });
-
-      dias.push({ isoStr, dateStr, isHoje, isWeekend: false, blocos, topicosCount: lote60.length + lote40.length + 1 });
+      dias.push({ isoStr, dateStr, isHoje, isWeekend: false, blocos, topicosCount: loteFraco.length + loteSem.length + loteMedio.length });
     }
     cur.setDate(cur.getDate() + 1);
   }
@@ -2036,8 +2058,8 @@ function buildCronograma() {
     rfCur.setDate(rfCur.getDate() + 1);
   }
 
-  return { dias, retaFinal, diasTotais, topicosTotal, tpd60, tpd40,
-           nNaoVistos: naoVistos.length, nFracos: fracos.length, nMedios: medios.length };
+  return { dias, retaFinal, diasTotais, topicosTotal, tpdFraco, tpdMedio,
+           nFracos: fracos.length, nSem: semQuestoes.length, nMedios: medios.length };
 }
 
 let currentPlanoTab = 'hoje';
@@ -2062,7 +2084,7 @@ function renderPlanoContainer() {
   const el2 = document.getElementById('ps-topicos');
   if (el2) el2.textContent = cronograma.topicosTotal;
   const el3 = document.getElementById('ps-tpd');
-  if (el3) el3.textContent = cronograma.tpd60 + '+' + cronograma.tpd40 + '/dia';
+  if (el3) el3.textContent = cronograma.tpdFraco + '+' + cronograma.tpdMedio + '/dia';
   const el4 = document.getElementById('ps-fase');
   if (el4) el4.textContent = fase.nome;
 
@@ -2071,7 +2093,7 @@ function renderPlanoContainer() {
     if (diasParaCutoff <= 0) {
       alertEl.innerHTML = `<strong>🔒 Reta Final ativada!</strong> Você está a ${Math.ceil((EXAM_DATE_LOCAL-hoje)/86400000)} dias da prova. Somente revisão e simulados agora.`;
     } else {
-      alertEl.innerHTML = `<strong>${fase.nome}:</strong> ${fase.desc} · ${diasRestantes} dias disponíveis para cobrir ${cronograma.nNaoVistos}📭 não estudados + ${cronograma.nFracos}🔴 fracos + ${cronograma.nMedios}🟡 médios = ${cronograma.topicosTotal} tópicos.`;
+      alertEl.innerHTML = `<strong>${fase.nome}:</strong> ${fase.desc} · ${diasRestantes} dias disponíveis para cobrir ${cronograma.nFracos}🔴 fracos + ${cronograma.nSem}📭 sem questões + ${cronograma.nMedios}🟡 médios = ${cronograma.topicosTotal} tópicos.`;
     }
   }
 
@@ -2122,7 +2144,7 @@ function renderPlanoContainer() {
           ${dia.blocos.map((bloco, bi) => bloco.itens.map((item, ii) => {
             const key = `${dia.isoStr}-${bi}-${ii}`;
             const done = state.planoDone[key];
-            const pctColor = (item.pct !== undefined && item.pct !== null) ? getStatusColor(item.pct) : 'var(--text3)';
+            const pctColor = item.pct !== undefined ? getStatusColor(item.pct) : 'var(--text3)';
             return `
               <div class="plan-item ${done ? 'done' : ''}" onclick="togglePlanItem('${key}', this)">
                 <div class="plan-check">${done ? '✓' : ''}</div>
@@ -2132,7 +2154,7 @@ function renderPlanoContainer() {
                   </div>
                   <div class="plan-item-name">
                     ${item.nome}
-                    ${(item.pct !== undefined && item.pct !== null) ? `<span style="font-family:'Syne';font-size:12px;font-weight:700;color:${pctColor};margin-left:8px">${item.pct}%</span>` : ''}
+                    ${item.pct !== undefined ? `<span style="font-family:'Syne';font-size:12px;font-weight:700;color:${pctColor};margin-left:8px">${item.pct}%</span>` : ''}
                   </div>
                   <div class="plan-item-detail">${item.detalhe}</div>
                 </div>
@@ -2645,13 +2667,13 @@ function renderRevisao() {
 
   const semanalEl = document.getElementById('revisao-semanal-list');
   if (semanalEl) {
-    const weak = getWeakTopics().filter(t => t.q >= 5).slice(0, 20);
+    const weak = getWeakTopicsAtual().filter(t => (t.qAtual ?? t.q) >= 5).slice(0, 20);
     semanalEl.innerHTML = weak.map((t, i) => `
       <div class="topic-row">
         <div class="topic-rank">${i+1}</div>
         <div class="topic-info">
           <div class="topic-name">${t.nome}</div>
-          <div class="topic-meta">${t.discNome.split(' ')[0]} · ${t.q} questões resolvidas</div>
+          <div class="topic-meta">${t.discNome.split(' ')[0]} · ${t.qAtual ?? t.q} questões resolvidas</div>
         </div>
         <div class="topic-pct status-weak">${t.pct}%</div>
       </div>
@@ -2778,6 +2800,9 @@ let simMostrandoResultado = false;
 function setSimTab(tab, el) {
   state.currentSimTab = tab;
   document.querySelectorAll('#page-simulado .tab').forEach(t => t.classList.remove('active'));
+  // Mostra/esconde seção externo
+  const extEl = document.getElementById('sim-externo');
+  if (extEl) extEl.style.display = tab === 'externo' ? '' : 'none';
   el.classList.add('active');
   if (tab === 'resultado') verResultados();
   else {
@@ -2909,6 +2934,59 @@ function iniciarNovoSim() {
   cancelarSimulado();
 }
 
+function calcExtPct() {
+  const qtd = parseInt(document.getElementById('ext-qtd')?.value || 0);
+  const ac  = parseInt(document.getElementById('ext-acertos')?.value || 0);
+  const prev = document.getElementById('ext-preview');
+  if (!prev) return;
+  if (!qtd || qtd <= 0 || isNaN(ac)) { prev.style.display = 'none'; return; }
+  const pct = Math.round(ac / qtd * 100);
+  prev.style.display = '';
+  const el = document.getElementById('ext-pct-show');
+  el.textContent = pct + '%';
+  el.style.color = getStatusColor(pct);
+  const bar = document.getElementById('ext-bar');
+  bar.style.width = pct + '%';
+  bar.className = 'prog-bar-fill ' + getFillClass(pct);
+}
+
+function registrarSimuladoExterno() {
+  const qtd     = parseInt(document.getElementById('ext-qtd')?.value);
+  const acertos = parseInt(document.getElementById('ext-acertos')?.value);
+  const fonte   = document.getElementById('ext-fonte')?.value.trim() || 'Externo';
+  const data    = document.getElementById('ext-data')?.value.trim() || new Date().toLocaleDateString('pt-BR');
+  const disc    = document.getElementById('ext-disc')?.value || 'geral';
+  const obs     = document.getElementById('ext-obs')?.value.trim() || '';
+  const fb      = document.getElementById('ext-feedback');
+
+  if (!qtd || qtd <= 0 || isNaN(acertos) || acertos < 0) {
+    fb.style.display = ''; fb.className = 'alert alert-red';
+    fb.innerHTML = '<span>⚠️</span><div>Preencha total de questões e acertos.</div>';
+    setTimeout(() => fb.style.display = 'none', 3000); return;
+  }
+  if (acertos > qtd) {
+    fb.style.display = ''; fb.className = 'alert alert-red';
+    fb.innerHTML = '<span>⚠️</span><div>Acertos não pode ser maior que o total.</div>';
+    setTimeout(() => fb.style.display = 'none', 3000); return;
+  }
+  const pct = Math.round(acertos / qtd * 100);
+  if (!state.simulados) state.simulados = [];
+  state.simulados.push({ data, questoes: qtd, acertos, pct, fonte, disc, obs, externo: true });
+  saveState();
+
+  // Limpa campos
+  ['ext-qtd','ext-acertos','ext-fonte','ext-obs'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('ext-preview').style.display = 'none';
+  document.getElementById('ext-data').value = '';
+
+  fb.style.display = ''; fb.className = 'alert alert-green';
+  fb.innerHTML = `<span>✅</span><div><strong>Registrado!</strong> ${fonte} — ${pct}% (${acertos}/${qtd}) em ${data}</div>`;
+  setTimeout(() => fb.style.display = 'none', 4000);
+  renderProgresso();
+}
+
 function verResultados() {
   document.getElementById('sim-config').style.display = 'none';
   document.getElementById('sim-area').style.display = 'none';
@@ -2922,12 +3000,13 @@ function verResultados() {
     <div class="card">
       <div class="section-title">📊 Histórico de Simulados</div>
       <table class="data-table" style="width:100%">
-        <thead><tr><th>#</th><th>Data</th><th>Questões</th><th>Acertos</th><th>%</th><th>Status</th></tr></thead>
+        <thead><tr><th>#</th><th>Data</th><th>Fonte</th><th>Questões</th><th>Acertos</th><th>%</th><th>Status</th></tr></thead>
         <tbody>
           ${state.simulados.slice().reverse().map((s, i) => `
             <tr>
               <td style="color:var(--text3)">${state.simulados.length - i}</td>
-              <td>${s.data}</td>
+              <td>${s.data}${s.externo ? ' <span class="badge badge-blue" style="font-size:9px">EXT</span>' : ''}</td>
+              <td>${s.fonte ? s.fonte : 'Plataforma'}</td>
               <td>${s.questoes}</td>
               <td>${s.acertos}</td>
               <td><span style="font-family:'Syne';font-weight:700;color:${getStatusColor(s.pct)}">${s.pct}%</span></td>
