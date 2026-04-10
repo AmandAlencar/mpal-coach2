@@ -1767,11 +1767,79 @@ function getPctAtual(discKey, topicoNome) {
 }
 
 // Retorna percentual combinado (base ponderada com sessões)
+// ── MAPA DE ALIASES — nomes antigos → novo nome fundido ─────────────────────
+// Garante que sessões registradas antes da fusão de tópicos continuem contando.
+const TOPIC_ALIASES = {
+  // Português
+  'concordância (verbal e nominal)':               'concordância e regência (verbal e nominal)',
+  'regência nominal e verbal':                     'concordância e regência (verbal e nominal)',
+  'sintaxe (geral)':                               'sintaxe e termos da oração',
+  'termos essenciais da oração':                   'sintaxe e termos da oração',
+  'colocação pronominal':                          'pronomes — colocação, relativos e partícula se',
+  'pronomes relativos':                            'pronomes — colocação, relativos e partícula se',
+  'partícula "se"':                                'pronomes — colocação, relativos e partícula se',
+  // Dir. Constitucional
+  'poder judiciário — stf':                        'poder judiciário — stf, trfs e cnj',
+  'poder judiciário — trfs e juízes federais':     'poder judiciário — stf, trfs e cnj',
+  'poder judiciário — cnj':                        'poder judiciário — stf, trfs e cnj',
+  'controle de constitucionalidade — adi':         'controle de constitucionalidade (adi e geral)',
+  'controle de constitucionalidade (geral)':       'controle de constitucionalidade (adi e geral)',
+  'poder legislativo — processo legislativo':      'poder legislativo — processo legislativo e mps',
+  'medidas provisórias':                           'poder legislativo — processo legislativo e mps',
+  // Dir. Administrativo
+  'atos administrativos — elementos/requisitos':   'atos administrativos (elementos, requisitos e convalidação)',
+  'convalidação dos atos administrativos':         'atos administrativos (elementos, requisitos e convalidação)',
+  'licitações — lei 14.133/2021':                  'licitações e controle das contratações — lei 14.133/2021',
+  'controle das contratações':                     'licitações e controle das contratações — lei 14.133/2021',
+  'bens públicos':                                 'bens públicos e formas de utilização',
+  'formas de utilização de bens públicos':         'bens públicos e formas de utilização',
+  // Administração Geral
+  'gestão por processos (bpm)':                    'gestão por processos — bpm, bpmn e cbok',
+  'bpm, bpmn e cbok':                              'gestão por processos — bpm, bpmn e cbok',
+  'gestão da qualidade (iso, fnq)':                'gestão da qualidade — iso, fnq e gespública',
+  'modelo de excelência gerencial (fnq)':          'gestão da qualidade — iso, fnq e gespública',
+  'qualidade nos serviços públicos (gespública)':  'gestão da qualidade — iso, fnq e gespública',
+  // Gestão de Pessoas (duplicatas removidas)
+  'cultura organizacional (gp)':                   'cultura organizacional',
+  'gestão de conflitos (gp)':                      'gestão de conflitos',
+  'indicadores de desempenho (gp)':                'indicadores de desempenho',
+  // AFO
+  'loa — lei orçamentária anual':                  'instrumentos orçamentários — ppa, ldo, loa e ciclo',
+  'ldo — lei de diretrizes orçamentárias':         'instrumentos orçamentários — ppa, ldo, loa e ciclo',
+  'instrumentos (ppa, ldo, loa)':                  'instrumentos orçamentários — ppa, ldo, loa e ciclo',
+  'ciclo orçamentário':                            'instrumentos orçamentários — ppa, ldo, loa e ciclo',
+  'despesa pública — conceitos gerais':            'despesa pública — conceitos, classificação e estágios',
+  'estágios da despesa pública':                   'despesa pública — conceitos, classificação e estágios',
+  'classificação da despesa orçamentária':         'despesa pública — conceitos, classificação e estágios',
+  'receita pública — classificação por natureza':  'receita pública — classificação e estágios',
+  'receita pública — estágios':                    'receita pública — classificação e estágios',
+  'despesas com pessoal (lrf arts. 18-24)':        'lrf — despesas com pessoal e geração de despesa',
+  'geração de despesa — lrf arts. 15-17':          'lrf — despesas com pessoal e geração de despesa',
+  'planejamento/orçamento — lrf arts. 3-10':       'lrf — despesas com pessoal e geração de despesa',
+  // PMBOK
+  'pmbok 7ª edição — tópicos específicos':         'pmbok 7ª ed. — domínios, tópicos específicos e comunicações',
+  'domínios de desempenho de projetos':            'pmbok 7ª ed. — domínios, tópicos específicos e comunicações',
+  'modelos, métodos e artefatos':                  'pmbok 7ª ed. — domínios, tópicos específicos e comunicações',
+  'gerenciamento das comunicações':                'pmbok 7ª ed. — domínios, tópicos específicos e comunicações',
+  'áreas de conhecimento pmbok 6ª ed.':            'pmbok 6ª ed. — áreas de conhecimento e ferramentas',
+  'ferramentas e técnicas de projetos':            'pmbok 6ª ed. — áreas de conhecimento e ferramentas',
+  'ciclo de vida de projetos':                     'ciclo de vida de projetos, eap e modelos',
+  'eap — estrutura analítica':                     'ciclo de vida de projetos, eap e modelos',
+  'diagrama de redes, pert, cpm':                  'diagrama de redes, pert/cpm e gerenciamento de riscos',
+  'gerenciamento de riscos':                       'diagrama de redes, pert/cpm e gerenciamento de riscos',
+};
+
+// Resolve o nome canônico de um tópico (considera aliases)
+function resolveTopicName(nome) {
+  const lower = nome.toLowerCase().trim();
+  return TOPIC_ALIASES[lower] || lower;
+}
+
 function getPctCombinado(discKey, topicoNome, pctBase, qBase) {
   if (!state.sessoes) return pctBase;
+  const nomeCanon = resolveTopicName(topicoNome);
   const matches = state.sessoes.filter(s =>
-    s.disc === discKey &&
-    s.topico.toLowerCase().trim() === topicoNome.toLowerCase().trim()
+    resolveTopicName(s.topico) === nomeCanon
   );
   if (matches.length === 0) return pctBase;
   // Usa SOMENTE as sessões registradas pelo usuário.
@@ -1789,8 +1857,9 @@ function getAllTopicsAtual() {
     for (const t of disc.topicos) {
       const pctAtual = getPctCombinado(disc.key, t.nome, t.pct, t.q);
       // qAtual = questões base + todas as questões das sessões registradas neste tópico
+      const nomeCanonT = resolveTopicName(t.nome);
       const sessoesTopic = (state.sessoes || []).filter(s =>
-        s.disc === disc.key && s.topico.toLowerCase().trim() === t.nome.toLowerCase().trim()
+        resolveTopicName(s.topico) === nomeCanonT
       );
       const qSessoes = sessoesTopic.reduce((a, s) => a + s.qtd, 0);
       const qAtual = t.q + qSessoes;
@@ -1878,19 +1947,21 @@ function getTopicosParaCronograma() {
   const INC = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
 
   // Tópicos com sessão registrada
+  // Usa só o NOME do tópico (sem disc) para detectar se foi estudado.
+  // Isso evita falsos "nunca estudado" quando a fusão de tópicos mudou a disciplina.
   const comSessao = new Set(
-    (state.sessoes || []).map(s => s.disc + '||' + s.topico.toLowerCase().trim())
+    (state.sessoes || []).map(s => resolveTopicName(s.topico))
   );
 
   // 60% — Nunca estudados (sem sessão) + Fracos (<70%) — intercalados por disciplina
-  const naoVistos = all.filter(t => !comSessao.has(t.disc + '||' + t.nome.toLowerCase().trim()))
+  const naoVistos = all.filter(t => !comSessao.has(resolveTopicName(t.nome)))
     .sort((a, b) => {
       if (b.peso !== a.peso) return b.peso - a.peso;
       return (INC[b.inc]||2) - (INC[a.inc]||2);
     });
 
   const fracos = all.filter(t =>
-    comSessao.has(t.disc + '||' + t.nome.toLowerCase().trim()) && t.pctAtual < 70
+    comSessao.has(resolveTopicName(t.nome)) && t.pctAtual < 70
   ).sort((a, b) => {
     if (b.peso !== a.peso) return b.peso - a.peso;
     const di = (INC[b.inc]||2) - (INC[a.inc]||2);
@@ -1901,9 +1972,9 @@ function getTopicosParaCronograma() {
   const pool60 = intercalarPorDisc([...naoVistos, ...fracos]);
 
   // 40% — Consolidação (≥70%), excluindo quem já está no pool60, por incidência FCC
-  const nomesPool60 = new Set(pool60.map(t => t.disc + '||' + t.nome.toLowerCase().trim()));
+  const nomesPool60 = new Set(pool60.map(t => resolveTopicName(t.nome)));
   const consolidacao = all.filter(t =>
-    t.pctAtual >= 70 && !nomesPool60.has(t.disc + '||' + t.nome.toLowerCase().trim())
+    t.pctAtual >= 70 && !nomesPool60.has(resolveTopicName(t.nome))
   ).sort((a, b) => {
     const di = (INC[b.inc]||2) - (INC[a.inc]||2);
     if (di !== 0) return di;
@@ -1953,7 +2024,7 @@ function buildCronograma() {
       });
     } else {
       const blocos = [];
-      const comSessaoLocal = new Set((state.sessoes||[]).map(s => s.disc+'||'+s.topico.toLowerCase().trim()));
+      const comSessaoLocal = new Set((state.sessoes||[]).map(s => resolveTopicName(s.topico)));
 
       // Lote 60% — críticos
       const lote60 = [];
@@ -1973,7 +2044,7 @@ function buildCronograma() {
           tipo: 'foco', hora: '07:30 – 09:30',
           nome: '🔥 60% — Novos + Críticos (Alta Prioridade)',
           itens: lote60.map(t => {
-            const naoVisto = !comSessaoLocal.has(t.disc + '||' + t.nome.toLowerCase().trim());
+            const naoVisto = !comSessaoLocal.has(resolveTopicName(t.nome));
             return {
               nome: t.nome,
               pct: naoVisto ? null : t.pctAtual,
