@@ -2000,7 +2000,19 @@ function buildCronograma() {
   const topicosTotal = Math.max(0, pool60.length + pool40.length - dominados);
 
   const dias = [];
-  let idx60 = 0, idx40 = 0;
+
+  // Calcula offset baseado na data real para que cada dia tenha tópicos diferentes
+  // Conta dias úteis desde a referência (01/04/2026)
+  const _ref = new Date('2026-04-01');
+  let _diasUteisHoje = 0;
+  const _tmp = new Date(_ref);
+  while (_tmp < hoje) {
+    if (_tmp.getDay() !== 0) _diasUteisHoje++;
+    _tmp.setDate(_tmp.getDate() + 1);
+  }
+  // idx60 e idx40 começam no ponto certo para hoje, rotacionando pelo tamanho do pool
+  let idx60 = pool60.length > 0 ? (_diasUteisHoje * tpd60) % pool60.length : 0;
+  let idx40 = pool40.length > 0 ? (_diasUteisHoje * tpd40) % pool40.length : 0;
   let cur = new Date(hoje);
 
   while (cur <= CUTOFF_DATE) {
