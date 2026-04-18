@@ -3201,13 +3201,13 @@ function calcPct() {
 
   // Encontrar base do tópico
   const discObj = DISCIPLINAS_MPAL.find(d => d.key === disc);
-  const topicoObj = discObj?.topicos.find(t => t.nome.toLowerCase() === topicoNome.toLowerCase());
+  const topicoObj = discObj?.topicos.find(t => resolveTopicName(t.nome) === resolveTopicName(topicoNome));
   const pctBase = topicoObj?.pct ?? 0;
   const qBase = topicoObj?.q ?? 0;
 
   // Prévia: simula o % combinado SÓ das sessões + esta nova
   const sessoesDoTopico = (state.sessoes||[]).filter(s =>
-    s.disc === disc && s.topico.toLowerCase() === topicoNome.toLowerCase()
+    resolveTopicName(s.topico) === resolveTopicName(topicoNome)
   );
   const qSessoes   = sessoesDoTopico.reduce((a,s) => a + s.qtd, 0);
   const acSessoes  = sessoesDoTopico.reduce((a,s) => a + s.acertos, 0);
@@ -3252,7 +3252,17 @@ function registrarSessao() {
 
   if (!state.sessoes) state.sessoes = [];
   const pct = Math.round(acertos / qtd * 100);
-  state.sessoes.push({ disc, topico: topicoNome, qtd, acertos, pct, data: new Date().toLocaleDateString('pt-BR') });
+  // Normaliza o nome para o canônico — garante que aliases e variações batem corretamente
+  const topicoCanon = (() => {
+    const canon = resolveTopicName(topicoNome);
+    // Tenta encontrar o nome exato no DISCIPLINAS_MPAL para garantir capitalização correta
+    for (const d of DISCIPLINAS_MPAL) {
+      const t = d.topicos.find(t => resolveTopicName(t.nome) === canon);
+      if (t) return t.nome;
+    }
+    return topicoNome; // fallback: nome como digitado
+  })();
+  state.sessoes.push({ disc, topico: topicoCanon, qtd, acertos, pct, data: new Date().toLocaleDateString('pt-BR') });
   saveState();
 
   // Limpar campos
