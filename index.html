@@ -1994,7 +1994,10 @@ function buildCronograma() {
 
   const tpd60 = 4; // tópicos críticos por dia (60% — novos + fracos)
   const tpd40 = 2; // tópicos consolidação por dia (40% — médios/fortes por incidência FCC)
-  const topicosTotal = pool60.length + pool40.length;
+  // topicosTotal = tópicos que AINDA precisam de trabalho (< 90%)
+  // Tópicos com 90%+ são considerados dominados e saem da contagem
+  const dominados = getAllTopicsAtual().filter(t => t.pctAtual >= 90).length;
+  const topicosTotal = Math.max(0, pool60.length + pool40.length - dominados);
 
   const dias = [];
   let idx60 = 0, idx40 = 0;
@@ -2082,7 +2085,17 @@ function buildCronograma() {
         { nome: 'Reescrita e Substituição',          inc: 'alta',  dica: '15 questões · substituição sem alterar sentido — item frequente na FCC' },
         { nome: 'Interpretação de Textos',           inc: 'alta',  dica: '10 questões · textos longos estilo FCC · inferências x dados explícitos' },
       ];
-      const ptIdx = dias.filter(d => !d.isWeekend).length % ptNomes.length;
+      // Usa a data real para calcular o índice — evita que hoje seja sempre índice 0
+      // Conta dias úteis desde 01/04/2026 (início do plano) até a data atual do loop
+      const _ptRef = new Date('2026-04-01');
+      const _ptCur = new Date(cur);
+      let _ptDiasUteis = 0;
+      const _ptTmp = new Date(_ptRef);
+      while (_ptTmp < _ptCur) {
+        if (_ptTmp.getDay() !== 0) _ptDiasUteis++;
+        _ptTmp.setDate(_ptTmp.getDate() + 1);
+      }
+      const ptIdx = _ptDiasUteis % ptNomes.length;
       const ptDef = ptNomes[ptIdx];
       // Busca % real do tópico nas sessões registradas
       const ptReal = getAllTopicsAtual().find(t =>
@@ -2172,7 +2185,8 @@ function renderPlanoContainer() {
     if (diasParaCutoff <= 0) {
       alertEl.innerHTML = `<strong>🔒 Reta Final ativada!</strong> Você está a ${Math.ceil((EXAM_DATE_LOCAL-hoje)/86400000)} dias da prova. Somente revisão e simulados agora.`;
     } else {
-      alertEl.innerHTML = `<strong>${fase.nome}:</strong> ${fase.desc} · ${diasRestantes} dias disponíveis para cobrir ${cronograma.nNaoVistos}📭 não estudados + ${cronograma.nFracos}🔴 fracos + ${cronograma.nMedios}🟡 médios = ${cronograma.topicosTotal} tópicos.`;
+      const dominadosCount = getAllTopicsAtual().filter(t => t.pctAtual >= 90).length;
+      alertEl.innerHTML = `<strong>${fase.nome}:</strong> ${fase.desc} · ${diasRestantes} dias · ${cronograma.nNaoVistos}📭 não estudados + ${cronograma.nFracos}🔴 fracos + ${cronograma.nMedios}🟡 médios = ${cronograma.topicosTotal} restantes${dominadosCount > 0 ? ' · ✅ ' + dominadosCount + ' dominados (≥90%)' : ''}.`;
     }
   }
 
