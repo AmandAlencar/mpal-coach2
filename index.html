@@ -2000,19 +2000,7 @@ function buildCronograma() {
   const topicosTotal = Math.max(0, pool60.length + pool40.length - dominados);
 
   const dias = [];
-
-  // Calcula offset baseado na data real para que cada dia tenha tópicos diferentes
-  // Conta dias úteis desde a referência (01/04/2026)
-  const _ref = new Date('2026-04-01');
-  let _diasUteisHoje = 0;
-  const _tmp = new Date(_ref);
-  while (_tmp < hoje) {
-    if (_tmp.getDay() !== 0) _diasUteisHoje++;
-    _tmp.setDate(_tmp.getDate() + 1);
-  }
-  // idx60 e idx40 começam no ponto certo para hoje, rotacionando pelo tamanho do pool
-  let idx60 = pool60.length > 0 ? (_diasUteisHoje * tpd60) % pool60.length : 0;
-  let idx40 = pool40.length > 0 ? (_diasUteisHoje * tpd40) % pool40.length : 0;
+  let idx60 = 0, idx40 = 0;
   let cur = new Date(hoje);
 
   while (cur <= CUTOFF_DATE) {
@@ -2085,17 +2073,18 @@ function buildCronograma() {
       }
 
       // Bloco 4 — Português fixo (40 min) — busca % real das sessões
+      // Nomes atualizados após fusão — batem exatamente com DISCIPLINAS_MPAL e o dropdown
       const ptNomes = [
-        { nome: 'Concordância (Verbal e Nominal)',  inc: 'alta',  dica: '20 questões · sujeito posposto, expressões partitivas, verbos impessoais' },
-        { nome: 'Regência Nominal e Verbal',         inc: 'alta',  dica: '15 questões · verbos: aspirar, assistir, visar, obedecer, preferir' },
-        { nome: 'Crase',                             inc: 'alta',  dica: '15 questões · locuções adverbiais, pronomes demonstrativos, aquela/aquilo' },
-        { nome: 'Partícula "Se"',                    inc: 'alta',  dica: '15 questões · índice de indeterminação vs partícula apassivadora' },
-        { nome: 'Colocação Pronominal',              inc: 'média', dica: '15 questões · próclise, mesóclise, ênclise — gatilhos de cada posição' },
-        { nome: 'Vozes (Passiva e Ativa)',           inc: 'alta',  dica: '15 questões · transformação de voz + identificação em texto' },
-        { nome: 'Sintaxe (geral)',                   inc: 'alta',  dica: '15 questões · termos da oração, período composto, análise sintática' },
-        { nome: 'Pronomes Relativos',                inc: 'média', dica: '15 questões · cujo/cuja, onde, quem — regência do antecedente' },
-        { nome: 'Reescrita e Substituição',          inc: 'alta',  dica: '15 questões · substituição sem alterar sentido — item frequente na FCC' },
-        { nome: 'Interpretação de Textos',           inc: 'alta',  dica: '10 questões · textos longos estilo FCC · inferências x dados explícitos' },
+        { nome: 'Concordância e Regência (Verbal e Nominal)', inc: 'alta',  dica: '20 questões · concordância verbal/nominal + regência de verbos cobrados pela FCC' },
+        { nome: 'Crase',                                      inc: 'alta',  dica: '15 questões · locuções adverbiais, pronomes demonstrativos, aquela/aquilo' },
+        { nome: 'Pronomes — Colocação, Relativos e Partícula Se', inc: 'alta', dica: '15 questões · próclise/ênclise, cujo/onde, índice de indeterminação vs apassivadora' },
+        { nome: 'Vozes (Passiva e Ativa)',                    inc: 'alta',  dica: '15 questões · transformação de voz + identificação em texto' },
+        { nome: 'Sintaxe e Termos da Oração',                inc: 'alta',  dica: '15 questões · termos da oração, período composto, análise sintática' },
+        { nome: 'Reescrita e Substituição',                   inc: 'alta',  dica: '15 questões · substituição sem alterar sentido — item frequente na FCC' },
+        { nome: 'Interpretação de Textos',                    inc: 'alta',  dica: '10 questões · textos longos estilo FCC · inferências x dados explícitos' },
+        { nome: 'Pontuação',                                  inc: 'alta',  dica: '15 questões · vírgula com orações adjetivas e adjuntos adverbiais deslocados' },
+        { nome: 'Coerência e Coesão / Conectivos',            inc: 'alta',  dica: '15 questões · conectivos, progressão textual, referência anafórica' },
+        { nome: 'Semântica / Significação',                   inc: 'média', dica: '10 questões · sinonímia, antonímia, polissemia, denotação e conotação' },
       ];
       // Usa a data real para calcular o índice — evita que hoje seja sempre índice 0
       // Conta dias úteis desde 01/04/2026 (início do plano) até a data atual do loop
@@ -2111,7 +2100,7 @@ function buildCronograma() {
       const ptDef = ptNomes[ptIdx];
       // Busca % real do tópico nas sessões registradas
       const ptReal = getAllTopicsAtual().find(t =>
-        t.disc === 'portugues' && t.nome.toLowerCase().trim() === ptDef.nome.toLowerCase().trim()
+        t.disc === 'portugues' && resolveTopicName(t.nome) === resolveTopicName(ptDef.nome)
       );
       const ptPct = (ptReal && ptReal.pctAtual !== ptReal.pctBase) ? ptReal.pctAtual : null;
       blocos.push({
