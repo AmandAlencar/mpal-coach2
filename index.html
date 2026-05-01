@@ -780,7 +780,7 @@
 <div id="page-plano" class="page">
   <div class="page-header">
     <h2>Plano de Estudo — Cronograma até a Prova</h2>
-    <p>4 horas diárias · todos os tópicos cobertos até 07/05/2026</p>
+    <p>4 horas diárias · todos os tópicos cobertos até 15 dias antes da prova (02/05/2026)</p>
   </div>
 
   <div class="alert alert-blue" id="plano-status-alert">
@@ -793,7 +793,7 @@
     <div class="card stat-card">
       <div class="stat-label">Dias Úteis Restantes</div>
       <div class="stat-value" id="ps-dias" style="color:var(--accent2)">—</div>
-      <div class="stat-sub">até 07/05/2026</div>
+      <div class="stat-sub">até 02/05/2026</div>
     </div>
     <div class="card stat-card">
       <div class="stat-label">Tópicos a Cobrir</div>
@@ -1897,7 +1897,7 @@ function calcMediaGeralAtual() {
 // CRONOGRAMA INTELIGENTE
 // ============================================================
 
-const CUTOFF_DATE = new Date('2026-05-07'); // cronograma até 07/05
+const CUTOFF_DATE = new Date('2026-05-02'); // 15 dias antes da prova
 const EXAM_DATE_LOCAL = new Date('2026-05-17');
 
 function getDiasUteis(de, ate) {
@@ -2123,8 +2123,142 @@ function buildCronograma() {
     cur.setDate(cur.getDate() + 1);
   }
 
+  // ── REVISÃO ESTRATÉGICA 5 DIAS (08–12/05) ─────────────────────────────────
+  // Baseada nos tópicos com maior incidência FCC que ainda estão abaixo de 80%
+  // Estrutura: 2-3 disciplinas por dia, revisão cruzada, 4h/dia
+
+  function buildRevisaoDia(discConfigs, dica_dia) {
+    // discConfigs: [{ discKey, discLabel, foco }]
+    // Para cada disciplina, pega os tópicos abaixo de 80% ordenados por incidência FCC
+    const INC = { 'altíssima': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
+    const all = getAllTopicsAtual();
+    const blocos = [];
+
+    discConfigs.forEach(({ discKey, discLabel, foco, todos }) => {
+      const topDisc = all
+        .filter(t => t.disc === discKey && (todos ? true : t.pctAtual < 85))
+        .sort((a, b) => {
+          const di = (INC[b.inc]||2) - (INC[a.inc]||2);
+          if (di !== 0) return di;
+          return a.pctAtual - b.pctAtual;
+        })
+        .slice(0, 3);
+
+      if (topDisc.length === 0) return;
+
+      blocos.push({
+        tipo: 'revisao',
+        hora: '',
+        nome: `🔁 ${discLabel}`,
+        itens: topDisc.map(t => ({
+          nome: t.nome,
+          pct: t.pctAtual,
+          detalhe: `${t.pctAtual < 70 ? '🔴' : t.pctAtual < 85 ? '🟡' : '🟢'} ${t.pctAtual}% · Incidência FCC: ${t.inc} · ${foco}`
+        }))
+      });
+    });
+
+    // Mini-simulado temático no final
+    blocos.push({
+      tipo: 'simulado',
+      hora: '10:30 – 11:00',
+      nome: '📝 Mini-Simulado Temático',
+      itens: [{ nome: `20 questões das disciplinas do dia — estilo FCC`, detalhe: dica_dia }]
+    });
+
+    return blocos;
+  }
+
+  // Configuração dos 5 dias — disciplinas + estratégia por dia
+  const REVISAO_5_DIAS = [
+    {
+      data: '2026-05-08',
+      label: 'Dia 1 — Língua Portuguesa + Dir. Constitucional',
+      emoji: '📝⚖️',
+      estrategia: 'Português é presença certa em toda prova FCC. Constitucional pesa muito no cargo de Técnico.',
+      discConfigs: [
+        { discKey: 'portugues', discLabel: 'Língua Portuguesa', foco: '10 questões · foco em erros recorrentes · revisar regras no gabarito' },
+        { discKey: 'dconst', discLabel: 'Dir. Constitucional', foco: '10 questões · arts. 37-41, Poder Judiciário, controle de constitucionalidade' },
+      ],
+      dica: 'Foco em questões de interpretação com pegadinha e artigos constitucionais mais cobrados pelo FCC'
+    },
+    {
+      data: '2026-05-09',
+      label: 'Dia 2 — Dir. Administrativo + AFO',
+      emoji: '🏛️💰',
+      estrategia: 'Administrativo e AFO são as disciplinas com mais questões na prova de Técnico e Analista.',
+      discConfigs: [
+        { discKey: 'dadm', discLabel: 'Dir. Administrativo', foco: '10 questões · atos administrativos, licitações, improbidade — os mais cobrados pela FCC' },
+        { discKey: 'afo', discLabel: 'AFO', foco: '10 questões · PPA/LDO/LOA, despesa pública, LRF — FCC adora cobrar estágios e classificações' },
+      ],
+      dica: 'Revise os macetes de classificação orçamentária e os requisitos dos atos administrativos'
+    },
+    {
+      data: '2026-05-10',
+      label: 'Dia 3 — Administração Geral + Gestão de Pessoas',
+      emoji: '📊👥',
+      estrategia: 'Adm Geral e GP são o coração do cargo de Analista — altíssima incidência FCC.',
+      discConfigs: [
+        { discKey: 'adm', discLabel: 'Administração Geral e Pública', foco: '10 questões · BSC, planejamento estratégico, processos — revisar conceitos-chave' },
+        { discKey: 'gp', discLabel: 'Gestão de Pessoas', foco: '10 questões · motivação, liderança, modelos de gestão — teorias mais cobradas FCC' },
+      ],
+      dica: 'Atenção às teorias motivacionais (Maslow, Herzberg, Vroom) e aos modelos de liderança situacional'
+    },
+    {
+      data: '2026-05-11',
+      label: 'Dia 4 — PMBOK + Legislação MPAL',
+      emoji: '📋📜',
+      estrategia: 'PMBOK cai todo concurso de Analista. Legislação MPAL é eliminatória — não pode errar.',
+      discConfigs: [
+        { discKey: 'pmbok', discLabel: 'Gestão de Projetos (PMBOK)', foco: '10 questões · domínios, ciclo de vida, PERT/CPM — revisar 7ª vs 6ª edição' },
+        { discKey: 'leg', discLabel: 'Legislação MPAL', foco: '10 questões · Estatuto (Lei 5.247), regime funcional, disciplinar — decorar artigos-chave' },
+      ],
+      dica: 'Na Legislação, foco nos arts. com número — a FCC cobra artigo específico com frequência'
+    },
+    {
+      data: '2026-05-12',
+      label: 'Dia 5 — Revisão Geral Estratégica (todos os pontos críticos)',
+      emoji: '🔥',
+      estrategia: 'Último dia de conteúdo. Varre as maiores lacunas em todas as disciplinas.',
+      discConfigs: [
+        { discKey: 'portugues', discLabel: 'Português — Pontos de Erro', foco: '5 questões · crase, concordância, pronomes — os 3 que mais pegam candidatos' },
+        { discKey: 'dadm', discLabel: 'Administrativo — Pontos de Erro', foco: '5 questões · atos, licitações, improbidade — revisar conceitos que confundem' },
+        { discKey: 'adm', discLabel: 'Adm. Geral — Pontos de Erro', foco: '5 questões · governança, processos, indicadores — itens com mais variação de banca' },
+      ],
+      dica: 'Dia de fechamento: consulte seu caderno de erros e revise só o que errou — sem conteúdo novo'
+    },
+  ];
+
   const retaFinal = [];
-  const rfStart = new Date(CUTOFF_DATE); rfStart.setDate(rfStart.getDate() + 1);
+
+  // Insere os 5 dias de revisão estratégica (08–12/05)
+  for (const rev of REVISAO_5_DIAS) {
+    const dateStr = new Date(rev.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' });
+    const isHoje = rev.data === new Date().toISOString().slice(0,10);
+    const diasParaProva = Math.ceil((EXAM_DATE_LOCAL - new Date(rev.data + 'T12:00:00')) / 86400000);
+
+    const blocoEstrategia = {
+      tipo: 'foco',
+      hora: '07:00 – 07:15',
+      nome: `${rev.emoji} ${rev.label}`,
+      itens: [{ nome: rev.estrategia, detalhe: `D-${diasParaProva} para a prova · 4h de revisão cruzada · foco nos erros e alta incidência FCC` }]
+    };
+
+    const blocosDisc = buildRevisaoDia(rev.discConfigs, rev.dica);
+
+    retaFinal.push({
+      isoStr: rev.data,
+      dateStr,
+      isHoje,
+      isRetaFinal: true,
+      isRevisaoEstrategica: true,
+      diasParaProva,
+      blocos: [blocoEstrategia, ...blocosDisc]
+    });
+  }
+
+  // Reta final (13–17/05)
+  const rfStart = new Date('2026-05-13');
   let rfCur = new Date(rfStart);
   while (rfCur <= EXAM_DATE_LOCAL) {
     const dateStr = rfCur.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' });
@@ -2136,16 +2270,20 @@ function buildCronograma() {
         itens: [{ nome: 'Técnico do MP — Manhã (08h)', detalhe: 'Chegue 1h antes · caneta preta/azul · documento com foto · boleto pago' },
                 { nome: 'Analista Gestão Pública — Tarde (14h)', detalhe: 'Almoço leve · descanse entre as provas · foco total' }] }] });
     } else {
-      const tipo = diasParaProva <= 3 ? 'descanso' : diasParaProva <= 7 ? 'revisao_final' : 'simulado_final';
+      const tipo = diasParaProva <= 2 ? 'descanso' : diasParaProva <= 5 ? 'revisao_final' : 'simulado_final';
       retaFinal.push({ isoStr, dateStr, isHoje, isRetaFinal: true, diasParaProva, blocos: [{
-        tipo, hora: tipo === 'descanso' ? '08:00 – 10:00' : '07:00 – 11:00',
-        nome: tipo === 'descanso' ? `🧘 D-${diasParaProva} — Revisão Leve + Descanso Mental`
-            : tipo === 'simulado_final' ? `📝 D-${diasParaProva} — Simulado Completo (Prova Real)` : `🔁 D-${diasParaProva} — Revisão Intensiva dos Mais Fracos`,
-        itens: tipo === 'descanso'
-          ? [{ nome: 'Revisar apenas anotações, gabaritos e resumos', detalhe: 'Nenhum conteúdo novo — descanso mental É desempenho. Durma bem.' }]
+        tipo,
+        hora: tipo === 'descanso' ? '08:00 – 10:00' : '07:00 – 11:00',
+        nome: tipo === 'descanso'
+          ? `🧘 D-${diasParaProva} — Descanso Mental e Logística`
           : tipo === 'simulado_final'
-          ? [{ nome: 'Simulado cronometrado — 60 questões', detalhe: 'Simule as condições exatas: horário, local, caneta. Analise erros após.' }]
-          : [{ nome: 'Revisão dos 10 tópicos mais fracos do ciclo completo', detalhe: '10 questões de cada tópico crítico — consolidar os ganhos do estudo' }]
+          ? `📝 D-${diasParaProva} — Simulado Completo Cronometrado`
+          : `🔁 D-${diasParaProva} — Revisão Final dos Mais Fracos`,
+        itens: tipo === 'descanso'
+          ? [{ nome: 'Nenhum conteúdo novo', detalhe: 'Revise só anotações e gabaritos · organize documentos · durma cedo · descanso é desempenho' }]
+          : tipo === 'simulado_final'
+          ? [{ nome: 'Simulado cronometrado — 60 questões', detalhe: 'Condições reais de prova: 3h cronometradas, sem consulta. Analise cada erro com calma.' }]
+          : [{ nome: 'Revisão final — tópicos mais fracos de cada disciplina', detalhe: 'Percorra o caderno de erros · 10 questões por tópico crítico · não estude nada novo' }]
       }] });
     }
     rfCur.setDate(rfCur.getDate() + 1);
