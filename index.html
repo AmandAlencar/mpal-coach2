@@ -630,6 +630,12 @@
     <a class="nav-item" onclick="goPage('topicos')">
       <span class="icon">🎯</span><span>Tópicos Críticos</span>
     </a>
+    <a class="nav-item" onclick="goPage('ciclo')">
+      <span class="icon">🔄</span><span>Ciclo de Estudos</span>
+    </a>
+    <a class="nav-item" onclick="goPage('revisao_grupos')">
+      <span class="icon">📦</span><span>Revisão por Grupos</span>
+    </a>
     <a class="nav-item" onclick="goPage('revisao')">
       <span class="icon">🔁</span><span>Revisão</span>
     </a>
@@ -915,6 +921,57 @@
 </div>
 
 <!-- ================== REVISÃO ================== -->
+<!-- ── CICLO DE ESTUDOS ──────────────────────────────────────── -->
+<div id="page-ciclo" class="page">
+  <div class="page-header">
+    <h2>🔄 Ciclo de Estudos</h2>
+    <p>Disciplinas ativas em rodízio — Português e Raciocínio Lógico aparecem 2× por ciclo</p>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="section-title" style="margin-bottom:4px">Ciclo atual</div>
+        <div id="ciclo-info" style="font-size:12px;color:var(--text2)">—</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="reiniciarCiclo()" class="btn" style="background:var(--bg);border:1px solid var(--border);color:var(--text2);padding:7px 14px;font-size:12px;border-radius:8px;cursor:pointer">🔄 Reiniciar ciclo</button>
+      </div>
+    </div>
+  </div>
+  <div id="ciclo-lista"></div>
+</div>
+
+<!-- ── REVISÃO POR GRUPOS A/B/C/D ────────────────────────────── -->
+<div id="page-revisao_grupos" class="page">
+  <div class="page-header">
+    <h2>📦 Revisão por Grupos</h2>
+    <p>Grupos A, B, C, D em rodízio de 4 dias — cada grupo revisado a cada 4 dias</p>
+  </div>
+
+  <!-- Seletor de disciplina -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="section-title">Disciplina</div>
+    <select id="grupos-disc-sel" onchange="renderGruposDisciplina()" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-family:inherit;font-size:13px">
+      <option value="">— Selecione a disciplina —</option>
+    </select>
+  </div>
+
+  <!-- Card hoje -->
+  <div class="card" id="grupos-hoje-card" style="margin-bottom:12px;display:none">
+    <div class="section-title" id="grupos-hoje-label">📅 Hoje — Grupo A</div>
+    <div id="grupos-hoje-lista"></div>
+  </div>
+
+  <!-- Lista de aulas + adicionar -->
+  <div class="card" id="grupos-aulas-card" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="section-title" style="margin-bottom:0">📚 Aulas cadastradas</div>
+      <button onclick="adicionarAula()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer">+ Nova Aula</button>
+    </div>
+    <div id="grupos-aulas-lista"></div>
+  </div>
+</div>
+
 <div id="page-revisao" class="page">
   <div class="page-header">
     <h2>Sistema de Revisão</h2>
@@ -1469,7 +1526,13 @@ let state = {
   sessoes: [],
   simulados: [],
   revisoes: [],     // revisões diárias (D+1) e semanais (D+7)
-  pausedDiscs: ['leg', 'pmbok', 'adm', 'gp'], // disciplinas pausadas
+  pausedDiscs: ['leg', 'pmbok', 'adm', 'gp'],
+  ciclo: {          // ciclo de estudos
+    inicio: null,   // ISO date de quando o ciclo começou
+    done: {},       // { posicao: true } dias marcados como feitos
+    offset: 0       // quantos dias já avançou
+  },
+  grupos: {},       // revisão por grupos A/B/C/D por disciplina
   checklistState: {},
   planoDone: {},
   currentDiagTab: 'fraco',
@@ -1638,6 +1701,284 @@ function goPage(id) {
   window.scrollTo(0, 0);
 }
 
+
+// ============================================================
+// CICLO DE ESTUDOS
+// ============================================================
+function buildCiclo() {
+  // Disciplinas ativas (não pausadas, com tópicos)
+  const paused = state.pausedDiscs || [];
+  const ativas = DISCIPLINAS_MPAL.filter(d => !paused.includes(d.key) && d.topicos.length > 0);
+  const outras = ativas.filter(d => d.key !== 'portugues' && d.key !== 'rl');
+  const port   = ativas.find(d => d.key === 'portugues');
+  const rl     = ativas.find(d => d.key === 'rl');
+
+  // Monta ciclo com Português e RL 2× sem serem consecutivos
+  // Estratégia: ciclo de (N outras + 2 port + 2 rl), intercalados
+  const base = [...outras]; // ex: [dadm, dconst, afo, dcivil...]
+  const ciclo = [];
+  const total = base.length;
+
+  // Distribui as ocorrências extras de port e rl uniformemente
+  // Posições no ciclo de tamanho total+4 (2 port + 2 rl)
+  const cicloSize = total + 4;
+  const positions = Array(cicloSize).fill(null);
+
+  // Coloca port em posições 0 e floor(cicloSize/2)
+  const portPos1 = 0;
+  const portPos2 = Math.floor(cicloSize / 2);
+  // Coloca rl em posições deslocadas de port (sem ser adjacente)
+  const rlPos1 = Math.floor(cicloSize / 4);
+  const rlPos2 = Math.floor(cicloSize * 3 / 4);
+
+  if (port) { positions[portPos1] = port; positions[portPos2] = port; }
+  if (rl) { positions[rlPos1] = rl; positions[rlPos2] = rl; }
+
+  // Preenche posições vazias com outras disciplinas
+  let baseIdx = 0;
+  for (let i = 0; i < cicloSize; i++) {
+    if (!positions[i] && baseIdx < base.length) {
+      positions[i] = base[baseIdx++];
+    }
+  }
+
+  return positions.filter(Boolean);
+}
+
+function getCicloHoje() {
+  if (!state.ciclo.inicio) return null;
+  const inicio = new Date(state.ciclo.inicio);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const diff = Math.floor((hoje - inicio) / 86400000);
+  return diff;
+}
+
+function reiniciarCiclo() {
+  state.ciclo.inicio = new Date().toISOString().slice(0,10);
+  state.ciclo.done = {};
+  saveState();
+  renderCiclo();
+}
+
+function marcarCicloFeito(diaOffset) {
+  if (!state.ciclo.done) state.ciclo.done = {};
+  state.ciclo.done[diaOffset] = !state.ciclo.done[diaOffset];
+  saveState();
+  renderCiclo();
+}
+
+function renderCiclo() {
+  const infoEl   = document.getElementById('ciclo-info');
+  const listaEl  = document.getElementById('ciclo-lista');
+  if (!listaEl) return;
+
+  const ciclo = buildCiclo();
+  if (ciclo.length === 0) {
+    listaEl.innerHTML = '<div class="card" style="text-align:center;color:var(--text3);padding:24px">Nenhuma disciplina ativa. Ative disciplinas no menu Gerenciar Disciplinas.</div>';
+    return;
+  }
+
+  if (!state.ciclo.inicio) {
+    listaEl.innerHTML = `<div class="card" style="text-align:center;padding:24px">
+      <div style="font-size:14px;color:var(--text2);margin-bottom:12px">O ciclo ainda não foi iniciado.</div>
+      <button onclick="reiniciarCiclo()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;font-weight:600;cursor:pointer">▶ Iniciar Ciclo Agora</button>
+    </div>`;
+    return;
+  }
+
+  const diaAtual = getCicloHoje();
+  const cicloSize = ciclo.length;
+  const cicloNum = Math.floor(diaAtual / cicloSize) + 1;
+  const posAtual = diaAtual % cicloSize;
+  if (infoEl) infoEl.textContent = `Ciclo ${cicloNum} · Dia ${posAtual + 1} de ${cicloSize} · Disciplinas: ${cicloSize} posições`;
+
+  // Mostra próximos 14 dias
+  let html = '';
+  for (let i = 0; i < 14; i++) {
+    const diaReal = diaAtual + i;
+    const disc = ciclo[diaReal % cicloSize];
+    if (!disc) continue;
+    const isHoje = i === 0;
+    const feito  = state.ciclo.done?.[diaReal] === true;
+    const isPassado = i < 0;
+    const dataLabel = (() => {
+      const d = new Date(); d.setDate(d.getDate() + i);
+      return d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' });
+    })();
+    const sessoesDisciplina = (state.sessoes||[]).filter(s => s.disc === disc.key).length;
+    html += `<div class="topic-row" style="padding:12px;margin-bottom:8px;border-radius:12px;
+      background:${isHoje ? 'rgba(201,79,47,0.06)' : 'var(--surface)'};
+      border:${isHoje ? '2px solid var(--accent)' : '1px solid var(--border)'};
+      opacity:${feito && !isHoje ? '0.6' : '1'}">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          ${isHoje ? '<span style="font-size:10px;background:var(--accent);color:#fff;padding:2px 7px;border-radius:4px;font-weight:700">HOJE</span>' : ''}
+          <span style="font-size:11px;color:var(--text3)">${dataLabel}</span>
+          <span style="font-size:10px;color:var(--text3)">· Pos. ${(diaReal % cicloSize) + 1}/${cicloSize}</span>
+        </div>
+        <div style="font-weight:700;font-size:14px;color:${feito ? 'var(--strong)' : 'var(--text1)'}">${feito ? '✅ ' : ''}${disc.nome}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${sessoesDisciplina} sessão(ões) registrada(s) nesta disciplina</div>
+      </div>
+      <button onclick="marcarCicloFeito(${diaReal})"
+        style="padding:7px 14px;border-radius:8px;border:none;font-size:11px;font-weight:600;cursor:pointer;
+               background:${feito ? 'var(--bg)' : 'var(--accent)'};
+               color:${feito ? 'var(--text2)' : '#fff'}">
+        ${feito ? 'Desmarcar' : '✓ Feito'}
+      </button>
+    </div>`;
+  }
+  listaEl.innerHTML = html;
+}
+
+// ============================================================
+// REVISÃO POR GRUPOS A/B/C/D
+// ============================================================
+const GRUPO_LABELS = ['A', 'B', 'C', 'D'];
+const GRUPO_COLORS = ['#1e40af', '#16a34a', '#d97706', '#7c3aed'];
+const GRUPO_INTERVAL = 4; // cada grupo é revisado a cada 4 dias
+// Dia do ciclo em que cada grupo é revisado: A=dia1, B=dia2, C=dia3, D=dia4
+
+function getGruposDisc(discKey) {
+  if (!state.grupos) state.grupos = {};
+  if (!state.grupos[discKey]) state.grupos[discKey] = { aulas: [], inicio: null };
+  return state.grupos[discKey];
+}
+
+function getCicloGrupoHoje(discKey) {
+  const g = getGruposDisc(discKey);
+  if (!g.inicio) return null;
+  const inicio = new Date(g.inicio);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const diff = Math.floor((hoje - inicio) / 86400000);
+  return diff % GRUPO_INTERVAL; // 0=A, 1=B, 2=C, 3=D
+}
+
+function adicionarAula() {
+  const discKey = document.getElementById('grupos-disc-sel').value;
+  if (!discKey) return;
+  const g = getGruposDisc(discKey);
+  if (!g.inicio) g.inicio = new Date().toISOString().slice(0,10);
+
+  // Atribui grupo baseado no índice (sequência: A, B, C, D, A, B...)
+  const idx = g.aulas.length;
+  const grupo = idx % 4;
+  const novaAula = {
+    id: Date.now() + '_' + Math.random().toString(36).slice(2),
+    nome: 'Aula ' + String(idx + 1).padStart(2,'0'),
+    dataAdicionada: new Date().toLocaleDateString('pt-BR'),
+    grupo: grupo, // 0=A,1=B,2=C,3=D
+    reviewsDone: 0,
+    ultimaRevisao: null
+  };
+  g.aulas.push(novaAula);
+  saveState();
+  renderGruposDisciplina();
+}
+
+function editarNomeAula(discKey, aulaId, novoNome) {
+  const g = getGruposDisc(discKey);
+  const aula = g.aulas.find(a => a.id === aulaId);
+  if (aula) { aula.nome = novoNome; saveState(); }
+}
+
+function marcarAulaRevisada(discKey, aulaId) {
+  const g = getGruposDisc(discKey);
+  const aula = g.aulas.find(a => a.id === aulaId);
+  if (!aula) return;
+  aula.reviewsDone++;
+  aula.ultimaRevisao = new Date().toLocaleDateString('pt-BR');
+  saveState();
+  renderGruposDisciplina();
+}
+
+function removerAula(discKey, aulaId) {
+  if (!confirm('Remover esta aula?')) return;
+  const g = getGruposDisc(discKey);
+  g.aulas = g.aulas.filter(a => a.id !== aulaId);
+  saveState();
+  renderGruposDisciplina();
+}
+
+function popularSelectGrupos() {
+  const sel = document.getElementById('grupos-disc-sel');
+  if (!sel) return;
+  const paused = state.pausedDiscs || [];
+  const opcoes = DISCIPLINAS_MPAL
+    .filter(d => !paused.includes(d.key))
+    .map(d => `<option value="${d.key}">${d.nome}${d.topicos.length === 0 ? ' (nova)' : ''}</option>`)
+    .join('');
+  sel.innerHTML = '<option value="">— Selecione a disciplina —</option>' + opcoes;
+}
+
+function renderRevisaoGrupos() {
+  popularSelectGrupos();
+  renderGruposDisciplina();
+}
+
+function renderGruposDisciplina() {
+  const discKey = document.getElementById('grupos-disc-sel')?.value;
+  const hojeCard  = document.getElementById('grupos-hoje-card');
+  const aulasCard = document.getElementById('grupos-aulas-card');
+  const hojeLabel = document.getElementById('grupos-hoje-label');
+  const hojeLista = document.getElementById('grupos-hoje-lista');
+  const aulasLista= document.getElementById('grupos-aulas-lista');
+
+  if (!discKey) {
+    if (hojeCard)  hojeCard.style.display  = 'none';
+    if (aulasCard) aulasCard.style.display = 'none';
+    return;
+  }
+  if (hojeCard)  hojeCard.style.display  = '';
+  if (aulasCard) aulasCard.style.display = '';
+
+  const g = getGruposDisc(discKey);
+  const grupoHoje = g.inicio ? getCicloGrupoHoje(discKey) : 0;
+  const grupoLabel = GRUPO_LABELS[grupoHoje];
+  const grupoColor = GRUPO_COLORS[grupoHoje];
+
+  // Card de hoje
+  if (hojeLabel) hojeLabel.innerHTML = `📅 Hoje — <span style="color:${grupoColor};font-weight:800">Grupo ${grupoLabel}</span>`;
+  const aulasHoje = g.aulas.filter(a => a.grupo === grupoHoje);
+  if (hojeLista) {
+    if (aulasHoje.length === 0) {
+      hojeLista.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhuma aula no Grupo ' + grupoLabel + ' ainda. Adicione aulas abaixo.</div>';
+    } else {
+      hojeLista.innerHTML = aulasHoje.map(a => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:11px;background:${grupoColor}22;color:${grupoColor};padding:2px 7px;border-radius:4px;font-weight:700">G${grupoLabel}</span>
+          <span style="flex:1;font-size:13px;font-weight:600">${a.nome}</span>
+          <span style="font-size:10px;color:var(--text3)">${a.reviewsDone}× revisada</span>
+          <button onclick="marcarAulaRevisada('${discKey}','${a.id}')"
+            style="background:#edf7f1;color:#1a6640;border:1px solid #b4e0c6;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">
+            ✓ Revisada
+          </button>
+        </div>`).join('');
+    }
+  }
+
+  // Lista completa de aulas
+  if (aulasLista) {
+    if (g.aulas.length === 0) {
+      aulasLista.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px">Nenhuma aula cadastrada. Clique em "+ Nova Aula" para começar.</div>';
+    } else {
+      aulasLista.innerHTML = g.aulas.map((a, idx) => {
+        const gc = GRUPO_COLORS[a.grupo];
+        const gl = GRUPO_LABELS[a.grupo];
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--bg);margin-bottom:6px;border:1px solid var(--border)">
+          <span style="font-size:10px;background:${gc}22;color:${gc};padding:2px 7px;border-radius:4px;font-weight:700;white-space:nowrap">G${gl}</span>
+          <input value="${a.nome}" onchange="editarNomeAula('${discKey}','${a.id}',this.value)"
+            style="flex:1;border:none;background:transparent;font-size:13px;font-weight:600;color:var(--text1);font-family:inherit;outline:none;min-width:0"
+            placeholder="Nome da aula...">
+          <span style="font-size:10px;color:var(--text3);white-space:nowrap">${a.reviewsDone}× · ${a.ultimaRevisao || 'nunca'}</span>
+          <button onclick="removerAula('${discKey}','${a.id}')"
+            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:4px"
+            onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
 function renderPage(id) {
   if (id === 'dashboard') renderDashboard();
   if (id === 'diagnostico') renderDiagnostico();
@@ -1645,6 +1986,8 @@ function renderPage(id) {
   if (id === 'disciplinas') { renderGerenciarDisciplinas(); renderDisciplinas(); }
   if (id === 'topicos') renderTopicos();
   if (id === 'checklist') renderChecklist();
+  if (id === 'ciclo') renderCiclo();
+  if (id === 'revisao_grupos') renderRevisaoGrupos();
   if (id === 'revisao') renderRevisao();
   if (id === 'progresso') renderProgresso();
   if (id === 'atualizar') { renderAtualizar(); renderTabelaTopicos(); }
