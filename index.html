@@ -945,30 +945,32 @@
 <div id="page-revisao_grupos" class="page">
   <div class="page-header">
     <h2>📦 Revisão por Grupos</h2>
-    <p>Grupos A, B, C, D em rodízio de 4 dias — cada grupo revisado a cada 4 dias</p>
+    <p>Cadastre aulas e avance pelos grupos A → B → C → D conforme revisar</p>
   </div>
-
-  <!-- Seletor de disciplina -->
   <div class="card" style="margin-bottom:12px">
-    <div class="section-title">Disciplina</div>
-    <select id="grupos-disc-sel" onchange="renderGruposDisciplina()" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-family:inherit;font-size:13px">
-      <option value="">— Selecione a disciplina —</option>
-    </select>
-  </div>
-
-  <!-- Card hoje -->
-  <div class="card" id="grupos-hoje-card" style="margin-bottom:12px;display:none">
-    <div class="section-title" id="grupos-hoje-label">📅 Hoje — Grupo A</div>
-    <div id="grupos-hoje-lista"></div>
-  </div>
-
-  <!-- Lista de aulas + adicionar -->
-  <div class="card" id="grupos-aulas-card" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="section-title" style="margin-bottom:0">📚 Aulas cadastradas</div>
-      <button onclick="adicionarAula()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer">+ Nova Aula</button>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div class="section-title" style="margin-bottom:4px">Disciplina</div>
+        <select id="grupos-disc-sel" onchange="renderGruposDisciplina()"
+          style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-family:inherit;font-size:13px">
+          <option value="">— Selecione —</option>
+        </select>
+      </div>
+      <button onclick="adicionarAula()"
+        style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer">
+        + Nova Aula
+      </button>
     </div>
-    <div id="grupos-aulas-lista"></div>
+    <div id="grupos-progress" style="display:none;margin-top:14px"></div>
+  </div>
+  <div id="grupos-board" style="display:none">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px">
+      <div id="col-grupo-0"></div>
+      <div id="col-grupo-1"></div>
+      <div id="col-grupo-2"></div>
+      <div id="col-grupo-3"></div>
+    </div>
+    <div id="col-concluidas"></div>
   </div>
 </div>
 
@@ -1837,79 +1839,98 @@ function renderCiclo() {
 // ============================================================
 const GRUPO_LABELS = ['A', 'B', 'C', 'D'];
 const GRUPO_COLORS = ['#1e40af', '#16a34a', '#d97706', '#7c3aed'];
-const GRUPO_INTERVAL = 4; // cada grupo é revisado a cada 4 dias
-// Dia do ciclo em que cada grupo é revisado: A=dia1, B=dia2, C=dia3, D=dia4
+
+const GRUPO_LABELS = ['A','B','C','D'];
+const GRUPO_COLORS = ['#1e40af','#16a34a','#d97706','#7c3aed'];
+const GRUPO_BG     = ['#eff6ff','#f0fdf4','#fffbeb','#f5f3ff'];
 
 function getGruposDisc(discKey) {
   if (!state.grupos) state.grupos = {};
-  if (!state.grupos[discKey]) state.grupos[discKey] = { aulas: [], inicio: null };
+  if (!state.grupos[discKey]) state.grupos[discKey] = { aulas: [] };
   return state.grupos[discKey];
 }
 
-function getCicloGrupoHoje(discKey) {
-  const g = getGruposDisc(discKey);
-  if (!g.inicio) return null;
-  const inicio = new Date(g.inicio);
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const diff = Math.floor((hoje - inicio) / 86400000);
-  return diff % GRUPO_INTERVAL; // 0=A, 1=B, 2=C, 3=D
-}
-
 function adicionarAula() {
-  const discKey = document.getElementById('grupos-disc-sel').value;
-  if (!discKey) return;
+  const discKey = document.getElementById('grupos-disc-sel')?.value;
+  if (!discKey) { alert('Selecione uma disciplina primeiro.'); return; }
   const g = getGruposDisc(discKey);
-  if (!g.inicio) g.inicio = new Date().toISOString().slice(0,10);
-
-  // Atribui grupo baseado no índice (sequência: A, B, C, D, A, B...)
   const idx = g.aulas.length;
-  const grupo = idx % 4;
-  const novaAula = {
+  g.aulas.push({
     id: Date.now() + '_' + Math.random().toString(36).slice(2),
-    nome: 'Aula ' + String(idx + 1).padStart(2,'0'),
-    dataAdicionada: new Date().toLocaleDateString('pt-BR'),
-    grupo: grupo, // 0=A,1=B,2=C,3=D
-    reviewsDone: 0,
-    ultimaRevisao: null
-  };
-  g.aulas.push(novaAula);
-  saveState();
-  renderGruposDisciplina();
+    nome: 'Aula ' + String(idx+1).padStart(2,'0'),
+    grupo: 0, concluida: false,
+    dataCadastro: new Date().toLocaleDateString('pt-BR'),
+    dataUltimaRevisao: null,
+    revisoesFeitas: 0
+  });
+  saveState(); renderGruposDisciplina();
 }
 
-function editarNomeAula(discKey, aulaId, novoNome) {
+function avancarGrupo(discKey, aulaId) {
   const g = getGruposDisc(discKey);
-  const aula = g.aulas.find(a => a.id === aulaId);
-  if (aula) { aula.nome = novoNome; saveState(); }
+  const a = g.aulas.find(x => x.id === aulaId);
+  if (!a) return;
+  a.revisoesFeitas++;
+  a.dataUltimaRevisao = new Date().toLocaleDateString('pt-BR');
+  if (a.grupo < 3) a.grupo++;
+  else a.concluida = true;
+  saveState(); renderGruposDisciplina();
 }
 
-function marcarAulaRevisada(discKey, aulaId) {
+function voltarGrupo(discKey, aulaId) {
   const g = getGruposDisc(discKey);
-  const aula = g.aulas.find(a => a.id === aulaId);
-  if (!aula) return;
-  aula.reviewsDone++;
-  aula.ultimaRevisao = new Date().toLocaleDateString('pt-BR');
-  saveState();
-  renderGruposDisciplina();
+  const a = g.aulas.find(x => x.id === aulaId);
+  if (!a) return;
+  if (a.concluida) a.concluida = false;
+  else if (a.grupo > 0) a.grupo--;
+  saveState(); renderGruposDisciplina();
 }
 
-function removerAula(discKey, aulaId) {
+function editarNomeAulaGrupo(discKey, aulaId, nome) {
+  const g = getGruposDisc(discKey);
+  const a = g.aulas.find(x => x.id === aulaId);
+  if (a) { a.nome = nome; saveState(); }
+}
+
+function removerAulaGrupo(discKey, aulaId) {
   if (!confirm('Remover esta aula?')) return;
   const g = getGruposDisc(discKey);
-  g.aulas = g.aulas.filter(a => a.id !== aulaId);
-  saveState();
-  renderGruposDisciplina();
+  g.aulas = g.aulas.filter(x => x.id !== aulaId);
+  saveState(); renderGruposDisciplina();
+}
+
+function aulaCard(discKey, aula, showActions) {
+  const gc = GRUPO_COLORS[aula.grupo];
+  const nextLabel = aula.grupo < 3 ? '→ Grupo '+GRUPO_LABELS[aula.grupo+1] : '✅ Concluir';
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px">
+    <input value="${aula.nome}"
+      onchange="editarNomeAulaGrupo('${discKey}','${aula.id}',this.value)"
+      style="width:100%;border:none;background:transparent;font-size:13px;font-weight:600;color:var(--text1);font-family:inherit;outline:none;margin-bottom:4px"
+      placeholder="Nome da aula...">
+    <div style="font-size:10px;color:var(--text3);margin-bottom:${showActions?'8':'0'}px">
+      ${aula.dataCadastro}${aula.dataUltimaRevisao?' · rev. '+aula.dataUltimaRevisao:''} · ${aula.revisoesFeitas}×
+    </div>
+    ${showActions ? `<div style="display:flex;gap:6px">
+      <button onclick="avancarGrupo('${discKey}','${aula.id}')"
+        style="flex:1;padding:6px;border-radius:7px;border:none;font-size:11px;font-weight:600;cursor:pointer;background:${gc};color:#fff">${nextLabel}</button>
+      ${aula.grupo>0||aula.concluida?`<button onclick="voltarGrupo('${discKey}','${aula.id}')"
+        style="padding:6px 10px;border-radius:7px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:var(--bg);color:var(--text3)">← Voltar</button>`:''}
+      <button onclick="removerAulaGrupo('${discKey}','${aula.id}')"
+        style="padding:6px 10px;border-radius:7px;border:none;font-size:11px;cursor:pointer;background:var(--bg);color:var(--text3)"
+        onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+    </div>` : '<div style="font-size:11px;color:#16a34a;font-weight:600">✅ Concluída</div>'}
+  </div>`;
 }
 
 function popularSelectGrupos() {
   const sel = document.getElementById('grupos-disc-sel');
   if (!sel) return;
   const paused = state.pausedDiscs || [];
-  const opcoes = DISCIPLINAS_MPAL
+  const opts = DISCIPLINAS_MPAL
     .filter(d => !paused.includes(d.key))
-    .map(d => `<option value="${d.key}">${d.nome}${d.topicos.length === 0 ? ' (nova)' : ''}</option>`)
+    .map(d => `<option value="${d.key}">${d.nome}${d.topicos.length===0?' (nova)':''}</option>`)
     .join('');
-  sel.innerHTML = '<option value="">— Selecione a disciplina —</option>' + opcoes;
+  sel.innerHTML = '<option value="">— Selecione —</option>' + opts;
 }
 
 function renderRevisaoGrupos() {
@@ -1918,68 +1939,63 @@ function renderRevisaoGrupos() {
 }
 
 function renderGruposDisciplina() {
-  const discKey = document.getElementById('grupos-disc-sel')?.value;
-  const hojeCard  = document.getElementById('grupos-hoje-card');
-  const aulasCard = document.getElementById('grupos-aulas-card');
-  const hojeLabel = document.getElementById('grupos-hoje-label');
-  const hojeLista = document.getElementById('grupos-hoje-lista');
-  const aulasLista= document.getElementById('grupos-aulas-lista');
-
-  if (!discKey) {
-    if (hojeCard)  hojeCard.style.display  = 'none';
-    if (aulasCard) aulasCard.style.display = 'none';
-    return;
-  }
-  if (hojeCard)  hojeCard.style.display  = '';
-  if (aulasCard) aulasCard.style.display = '';
+  const discKey  = document.getElementById('grupos-disc-sel')?.value;
+  const board    = document.getElementById('grupos-board');
+  const progress = document.getElementById('grupos-progress');
+  if (!board) return;
+  if (!discKey) { board.style.display='none'; if(progress) progress.style.display='none'; return; }
+  board.style.display = '';
 
   const g = getGruposDisc(discKey);
-  const grupoHoje = g.inicio ? getCicloGrupoHoje(discKey) : 0;
-  const grupoLabel = GRUPO_LABELS[grupoHoje];
-  const grupoColor = GRUPO_COLORS[grupoHoje];
+  const total = g.aulas.length;
+  const concluidas = g.aulas.filter(a => a.concluida).length;
+  const counts = GRUPO_LABELS.map((_,i) => g.aulas.filter(a => !a.concluida && a.grupo===i).length);
 
-  // Card de hoje
-  if (hojeLabel) hojeLabel.innerHTML = `📅 Hoje — <span style="color:${grupoColor};font-weight:800">Grupo ${grupoLabel}</span>`;
-  const aulasHoje = g.aulas.filter(a => a.grupo === grupoHoje);
-  if (hojeLista) {
-    if (aulasHoje.length === 0) {
-      hojeLista.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhuma aula no Grupo ' + grupoLabel + ' ainda. Adicione aulas abaixo.</div>';
-    } else {
-      hojeLista.innerHTML = aulasHoje.map(a => `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <span style="font-size:11px;background:${grupoColor}22;color:${grupoColor};padding:2px 7px;border-radius:4px;font-weight:700">G${grupoLabel}</span>
-          <span style="flex:1;font-size:13px;font-weight:600">${a.nome}</span>
-          <span style="font-size:10px;color:var(--text3)">${a.reviewsDone}× revisada</span>
-          <button onclick="marcarAulaRevisada('${discKey}','${a.id}')"
-            style="background:#edf7f1;color:#1a6640;border:1px solid #b4e0c6;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">
-            ✓ Revisada
-          </button>
-        </div>`).join('');
-    }
+  if (progress) {
+    progress.style.display = total>0 ? '' : 'none';
+    progress.innerHTML = `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        ${GRUPO_LABELS.map((l,i)=>`
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;background:${GRUPO_BG[i]};color:${GRUPO_COLORS[i]}">
+            Grupo ${l}: ${counts[i]}
+          </span>`).join('')}
+        <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;background:#f0fdf4;color:#16a34a">
+          ✅ ${concluidas}/${total} concluídas
+        </span>
+      </div>
+      <div style="height:6px;border-radius:3px;background:var(--border);overflow:hidden">
+        <div style="height:100%;width:${total>0?Math.round(concluidas/total*100):0}%;background:#16a34a;transition:width 0.3s"></div>
+      </div>`;
   }
 
-  // Lista completa de aulas
-  if (aulasLista) {
-    if (g.aulas.length === 0) {
-      aulasLista.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px">Nenhuma aula cadastrada. Clique em "+ Nova Aula" para começar.</div>';
-    } else {
-      aulasLista.innerHTML = g.aulas.map((a, idx) => {
-        const gc = GRUPO_COLORS[a.grupo];
-        const gl = GRUPO_LABELS[a.grupo];
-        return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--bg);margin-bottom:6px;border:1px solid var(--border)">
-          <span style="font-size:10px;background:${gc}22;color:${gc};padding:2px 7px;border-radius:4px;font-weight:700;white-space:nowrap">G${gl}</span>
-          <input value="${a.nome}" onchange="editarNomeAula('${discKey}','${a.id}',this.value)"
-            style="flex:1;border:none;background:transparent;font-size:13px;font-weight:600;color:var(--text1);font-family:inherit;outline:none;min-width:0"
-            placeholder="Nome da aula...">
-          <span style="font-size:10px;color:var(--text3);white-space:nowrap">${a.reviewsDone}× · ${a.ultimaRevisao || 'nunca'}</span>
-          <button onclick="removerAula('${discKey}','${a.id}')"
-            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:4px"
-            onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">✕</button>
-        </div>`;
-      }).join('');
-    }
+  GRUPO_LABELS.forEach((label, i) => {
+    const col = document.getElementById('col-grupo-'+i);
+    if (!col) return;
+    const aulasGrupo = g.aulas.filter(a => !a.concluida && a.grupo===i);
+    col.innerHTML = `
+      <div style="background:${GRUPO_BG[i]};border:1px solid ${GRUPO_COLORS[i]}33;border-radius:12px;padding:12px;min-height:60px">
+        <div style="font-size:11px;font-weight:800;color:${GRUPO_COLORS[i]};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">
+          Grupo ${label} <span style="font-weight:400;opacity:0.7">(${aulasGrupo.length})</span>
+        </div>
+        ${aulasGrupo.length===0
+          ? `<div style="font-size:11px;color:var(--text3);text-align:center;padding:12px 0">Vazio</div>`
+          : aulasGrupo.map(a => aulaCard(discKey,a,true)).join('')}
+      </div>`;
+  });
+
+  const colConc = document.getElementById('col-concluidas');
+  const aulasConcluidas = g.aulas.filter(a => a.concluida);
+  if (colConc) {
+    colConc.innerHTML = aulasConcluidas.length===0 ? '' : `
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px">
+        <div style="font-size:11px;font-weight:700;color:#16a34a;margin-bottom:10px">✅ Concluídas (${aulasConcluidas.length})</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+          ${aulasConcluidas.map(a=>aulaCard(discKey,a,false)).join('')}
+        </div>
+      </div>`;
   }
 }
+
 
 function renderPage(id) {
   if (id === 'dashboard') renderDashboard();
