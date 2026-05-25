@@ -641,6 +641,9 @@
     </a>
 
     <div class="nav-section-label">Avaliação</div>
+    <a class="nav-item" onclick="goPage('bancas')">
+      <span class="icon">🏛️</span><span>Bancas</span>
+    </a>
     <a class="nav-item" onclick="goPage('simulado')">
       <span class="icon">📝</span><span>Simulado</span>
     </a>
@@ -1005,6 +1008,41 @@
 </div>
 
 <!-- ================== SIMULADO ================== -->
+<div id="page-bancas" class="page">
+  <div class="page-header">
+    <h2>🏛️ Índices de Cobrança por Banca</h2>
+    <p>Consulte o peso de cada tópico por banca — adicione bancas conforme for estudando</p>
+  </div>
+
+  <!-- Controles -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px">
+        <div class="section-title" style="margin-bottom:4px">Banca</div>
+        <div style="display:flex;gap:8px">
+          <select id="bancas-sel" onchange="renderBancaConteudo()"
+            style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-family:inherit;font-size:13px">
+            <option value="">— Selecione —</option>
+          </select>
+          <button onclick="adicionarBanca()"
+            style="padding:8px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+            + Banca
+          </button>
+        </div>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <div class="section-title" style="margin-bottom:4px">Disciplina</div>
+        <select id="bancas-disc-sel" onchange="renderBancaTabela()"
+          style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-family:inherit;font-size:13px">
+          <option value="">— Todas —</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="bancas-conteudo"></div>
+</div>
+
 <div id="page-simulado" class="page">
   <div class="page-header">
     <h2>Simulado Estratégico FCC</h2>
@@ -1510,7 +1548,22 @@ const DISCIPLINAS_MPAL = [
     ]
   },
   // ── NOVAS DISCIPLINAS (tópicos a adicionar em breve) ──────────────────────
-  { key: 'rl',   nome: 'Raciocínio Lógico',              cargo: 'Ambos',  peso: 1, pct: 0, questoes: 0, cat: 'novo', topicos: [] },
+  { key: 'rl', nome: 'Raciocínio Lógico', cargo: 'Ambos', peso: 1, pct: 0, questoes: 1221, cat: 'novo', topicos: [
+    { nome: 'Porcentagem',                                                                    pct: 0, q: 291, inc: 'altíssima' },
+    { nome: 'Sequências de Números, Figuras, Letras e Palavras',                              pct: 0, q: 153, inc: 'alta' },
+    { nome: 'Associação de Informações',                                                      pct: 0, q: 146, inc: 'alta' },
+    { nome: 'Regra de Três Simples',                                                          pct: 0, q: 104, inc: 'alta' },
+    { nome: 'Diagramas Lógicos, Proposições Categóricas e Negação de Quantificadores',        pct: 0, q: 96,  inc: 'alta' },
+    { nome: 'Argumentos — Métodos Decorrentes da Tabela Verdade',                             pct: 0, q: 84,  inc: 'alta' },
+    { nome: 'Equivalências Lógicas (Negação de Proposições Compostas)',                       pct: 0, q: 70,  inc: 'alta' },
+    { nome: 'Média para Dados não Agrupados',                                                 pct: 0, q: 51,  inc: 'média' },
+    { nome: 'Exercícios de Verdade/Mentira',                                                  pct: 0, q: 51,  inc: 'média' },
+    { nome: 'Regra de Três Composta',                                                         pct: 0, q: 44,  inc: 'média' },
+    { nome: 'Quantis (Mediana, Quartil, Decil, Percentil) e Interpolação Linear da Ogiva',   pct: 0, q: 32,  inc: 'baixa' },
+    { nome: 'Raciocínio Crítico',                                                             pct: 0, q: 32,  inc: 'baixa' },
+    { nome: 'Média para Dados Agrupados por Valor',                                           pct: 0, q: 14,  inc: 'baixa' },
+    { nome: 'Desvio Padrão e Variância',                                                      pct: 0, q: 13,  inc: 'baixa' },
+  ] },
   { key: 'info', nome: 'Informática',                    cargo: 'Ambos',  peso: 1, pct: 0, questoes: 0, cat: 'novo', topicos: [] },
   { key: 'dcivil', nome: 'Direito Civil',                cargo: 'Ambos',  peso: 2, pct: 0, questoes: 0, cat: 'novo', topicos: [] },
   { key: 'dpenal', nome: 'Direito Penal',                cargo: 'Ambos',  peso: 2, pct: 0, questoes: 0, cat: 'novo', topicos: [] },
@@ -1542,6 +1595,7 @@ let state = {
   currentSimTab: 'focado',
   currentSimConfig: null,
   currentSimAnswers: {},
+  bancas: {},   // índices de cobrança por banca e disciplina
 };
 
 // ── SYNC STATUS ──────────────────────────────────────────────
@@ -1994,6 +2048,257 @@ function renderGruposDisciplina() {
 }
 
 
+// ============================================================
+// BANCAS — índices de cobrança por banca e disciplina
+// ============================================================
+
+// Dados pré-carregados: FCC × Raciocínio Lógico (da imagem enviada)
+const BANCAS_PRESET = {
+  'FCC': {
+    'rl': [
+      { topico: 'Porcentagem',                                                                   questoes: 291, pct_banca: 23.81 },
+      { topico: 'Sequências de Números, Figuras, Letras e Palavras',                             questoes: 153, pct_banca: 12.52 },
+      { topico: 'Associação de Informações',                                                     questoes: 146, pct_banca: 11.95 },
+      { topico: 'Regra de Três Simples',                                                         questoes: 104, pct_banca:  8.51 },
+      { topico: 'Diagramas Lógicos, Proposições Categóricas e Negação de Quantificadores',       questoes:  96, pct_banca:  7.86 },
+      { topico: 'Argumentos — Métodos Decorrentes da Tabela Verdade',                            questoes:  84, pct_banca:  6.87 },
+      { topico: 'Equivalências Lógicas (Negação de Proposições Compostas)',                      questoes:  70, pct_banca:  5.73 },
+      { topico: 'Média para Dados não Agrupados',                                                questoes:  51, pct_banca:  4.17 },
+      { topico: 'Exercícios de Verdade/Mentira',                                                 questoes:  51, pct_banca:  4.17 },
+      { topico: 'Regra de Três Composta',                                                        questoes:  44, pct_banca:  3.60 },
+      { topico: 'Quantis (Mediana, Quartil, Decil, Percentil) e Interpolação Linear da Ogiva',  questoes:  32, pct_banca:  2.62 },
+      { topico: 'Raciocínio Crítico',                                                            questoes:  32, pct_banca:  2.62 },
+      { topico: 'Média para Dados Agrupados por Valor',                                          questoes:  14, pct_banca:  1.15 },
+      { topico: 'Desvio Padrão e Variância',                                                     questoes:  13, pct_banca:  1.06 },
+    ]
+  }
+};
+
+function initBancas() {
+  if (!state.bancas) state.bancas = {};
+  // Carrega presets se a banca ainda não existir no state
+  for (const [banca, discs] of Object.entries(BANCAS_PRESET)) {
+    if (!state.bancas[banca]) {
+      state.bancas[banca] = discs;
+    }
+  }
+}
+
+function adicionarBanca() {
+  const nome = prompt('Nome da banca (ex: CESPE, VUNESP, FGV):');
+  if (!nome || !nome.trim()) return;
+  const key = nome.trim().toUpperCase();
+  if (!state.bancas) state.bancas = {};
+  if (state.bancas[key]) { alert('Banca já existe.'); return; }
+  state.bancas[key] = {};
+  saveState();
+  renderBancas();
+  // Seleciona a nova banca
+  const sel = document.getElementById('bancas-sel');
+  if (sel) { sel.value = key; renderBancaConteudo(); }
+}
+
+function popularSelectBancas() {
+  initBancas();
+  const sel = document.getElementById('bancas-sel');
+  if (!sel) return;
+  const bancas = Object.keys(state.bancas || {});
+  sel.innerHTML = '<option value="">— Selecione a banca —</option>' +
+    bancas.map(b => `<option value="${b}">${b}</option>`).join('');
+}
+
+function popularSelectDiscBancas() {
+  const sel = document.getElementById('bancas-disc-sel');
+  if (!sel) return;
+  const paused = state.pausedDiscs || [];
+  const opts = DISCIPLINAS_MPAL
+    .filter(d => !paused.includes(d.key))
+    .map(d => `<option value="${d.key}">${d.nome}</option>`)
+    .join('');
+  sel.innerHTML = '<option value="">— Todas as disciplinas —</option>' + opts;
+}
+
+function renderBancas() {
+  popularSelectBancas();
+  popularSelectDiscBancas();
+  renderBancaConteudo();
+}
+
+function renderBancaConteudo() {
+  const banca   = document.getElementById('bancas-sel')?.value;
+  const cont    = document.getElementById('bancas-conteudo');
+  if (!cont) return;
+
+  if (!banca) {
+    // Mostra resumo de todas as bancas
+    const bancas = Object.keys(state.bancas || {});
+    if (bancas.length === 0) {
+      cont.innerHTML = `<div class="card" style="text-align:center;padding:32px;color:var(--text3)">
+        Nenhuma banca cadastrada ainda.<br>Clique em <strong>+ Banca</strong> para adicionar.
+      </div>`;
+      return;
+    }
+    cont.innerHTML = bancas.map(b => {
+      const discs = state.bancas[b] || {};
+      const nDiscs = Object.keys(discs).length;
+      const totalQ = Object.values(discs).flat().reduce((s, t) => s + (t.questoes||0), 0);
+      return `<div class="card" style="margin-bottom:10px;cursor:pointer" onclick="document.getElementById('bancas-sel').value='${b}';renderBancaConteudo()">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">${b}</div>
+            <div style="font-size:12px;color:var(--text3)">${nDiscs} disciplina(s) · ${totalQ} questões mapeadas</div>
+          </div>
+          <span style="font-size:18px;color:var(--text3)">›</span>
+        </div>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  renderBancaTabela();
+}
+
+function renderBancaTabela() {
+  const banca   = document.getElementById('bancas-sel')?.value;
+  const discFil = document.getElementById('bancas-disc-sel')?.value;
+  const cont    = document.getElementById('bancas-conteudo');
+  if (!cont || !banca) return;
+
+  initBancas();
+  const bancaData = state.bancas[banca] || {};
+  const discKeys  = discFil ? [discFil] : Object.keys(bancaData);
+
+  if (discKeys.length === 0) {
+    cont.innerHTML = `<div class="card" style="text-align:center;padding:24px;color:var(--text3)">
+      <div style="font-size:14px;margin-bottom:12px">Nenhum dado cadastrado para <strong>${banca}</strong> ainda.</div>
+      <div style="font-size:12px">Use o botão abaixo para adicionar índices de cobrança de uma disciplina.</div>
+      <button onclick="adicionarDiscBanca('${banca}')"
+        style="margin-top:14px;padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">
+        + Adicionar Disciplina
+      </button>
+    </div>`;
+    return;
+  }
+
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700">${banca}</div>
+    <button onclick="adicionarDiscBanca('${banca}')"
+      style="padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">
+      + Disciplina
+    </button>
+  </div>`;
+
+  for (const discKey of discKeys) {
+    const disc    = DISCIPLINAS_MPAL.find(d => d.key === discKey);
+    const topicos = bancaData[discKey] || [];
+    if (!topicos.length) continue;
+    const total   = topicos.reduce((s, t) => s + (t.questoes||0), 0);
+
+    html += `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="section-title" style="margin-bottom:0">${disc?.nome || discKey}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:11px;color:var(--text3)">${total} questões mapeadas</span>
+          <button onclick="removerDiscBanca('${banca}','${discKey}')"
+            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px"
+            onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border)">
+            <th style="text-align:left;padding:5px 0;color:var(--text3);font-weight:600">#</th>
+            <th style="text-align:left;padding:5px 0;color:var(--text3);font-weight:600">Tópico</th>
+            <th style="text-align:right;padding:5px 8px;color:var(--text3);font-weight:600">Questões</th>
+            <th style="text-align:right;padding:5px 0;color:var(--text3);font-weight:600">% da banca</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${topicos.map((t, i) => `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px 4px 6px 0;color:var(--text3);font-size:11px">${i+1}</td>
+              <td style="padding:6px 0">
+                <input value="${t.topico}" onchange="editarTopicoBanca('${banca}','${discKey}',${i},'topico',this.value)"
+                  style="width:100%;border:none;background:transparent;font-size:12px;color:var(--text1);font-family:inherit;outline:none">
+              </td>
+              <td style="padding:6px 8px;text-align:right">
+                <input type="number" value="${t.questoes||0}" onchange="editarTopicoBanca('${banca}','${discKey}',${i},'questoes',+this.value)"
+                  style="width:60px;border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;text-align:right;background:var(--bg);color:var(--text1);font-family:inherit">
+              </td>
+              <td style="padding:6px 0;text-align:right">
+                <span style="font-weight:700;color:${t.pct_banca>=10?'var(--accent)':t.pct_banca>=5?'var(--mid)':'var(--text2)'}">
+                  ${(t.pct_banca||0).toFixed(2)}%
+                </span>
+              </td>
+              <td style="padding:6px 0 6px 8px">
+                <button onclick="removerTopicoBanca('${banca}','${discKey}',${i})"
+                  style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px"
+                  onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <button onclick="adicionarTopicoBanca('${banca}','${discKey}')"
+        style="margin-top:10px;padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text2)">
+        + Tópico
+      </button>
+    </div>`;
+  }
+
+  cont.innerHTML = html;
+}
+
+function adicionarDiscBanca(banca) {
+  const disc = prompt('Chave da disciplina (ex: rl, dadm, dconst, portugues, dcivil, afo):');
+  if (!disc) return;
+  const key = disc.trim().toLowerCase();
+  if (!state.bancas[banca]) state.bancas[banca] = {};
+  if (!state.bancas[banca][key]) state.bancas[banca][key] = [];
+  saveState();
+  renderBancaTabela();
+}
+
+function removerDiscBanca(banca, discKey) {
+  if (!confirm('Remover esta disciplina da banca?')) return;
+  delete state.bancas[banca][discKey];
+  saveState();
+  renderBancaTabela();
+}
+
+function adicionarTopicoBanca(banca, discKey) {
+  if (!state.bancas[banca]) state.bancas[banca] = {};
+  if (!state.bancas[banca][discKey]) state.bancas[banca][discKey] = [];
+  state.bancas[banca][discKey].push({ topico: 'Novo Tópico', questoes: 0, pct_banca: 0 });
+  saveState();
+  renderBancaTabela();
+}
+
+function editarTopicoBanca(banca, discKey, idx, campo, valor) {
+  if (!state.bancas?.[banca]?.[discKey]?.[idx]) return;
+  state.bancas[banca][discKey][idx][campo] = valor;
+  // Recalcula % se questões mudarem
+  if (campo === 'questoes') {
+    const total = state.bancas[banca][discKey].reduce((s,t) => s+(t.questoes||0), 0);
+    if (total > 0) {
+      state.bancas[banca][discKey].forEach(t => {
+        t.pct_banca = Math.round(t.questoes / total * 10000) / 100;
+      });
+    }
+    saveState();
+    renderBancaTabela();
+  } else {
+    saveState();
+  }
+}
+
+function removerTopicoBanca(banca, discKey, idx) {
+  state.bancas[banca][discKey].splice(idx, 1);
+  saveState();
+  renderBancaTabela();
+}
+
+
 function renderPage(id) {
   if (id === 'dashboard') renderDashboard();
   if (id === 'diagnostico') renderDiagnostico();
@@ -2004,6 +2309,7 @@ function renderPage(id) {
   if (id === 'ciclo') renderCiclo();
   if (id === 'revisao_grupos') renderRevisaoGrupos();
   if (id === 'revisao') renderRevisao();
+  if (id === 'bancas') renderBancas();
   if (id === 'progresso') renderProgresso();
   if (id === 'atualizar') { renderAtualizar(); renderTabelaTopicos(); }
 }
